@@ -1,0 +1,31 @@
+# ---- Android ----
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.iml
+*.apk
+*.aab
+
+# ---- Web ----
+web/node_modules/
+web/dist/
+
+# ---- Server (Spring Boot) ----
+server/target/
+server/data/
+server/uploads/
+server/boot.log
+server/boot-err.log
+*.log
+
+# ---- IDE / OS ----
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---- 其它 ----
+*.class
+*.jar

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小蓝书 · 全栈架构可视化</title>
+<style>
+  :root {
+    --brand: #1f6fff;
+    --brand-light: #eaf1ff;
+    --brand-2: #61a5ff;
+    --ink: #1f2329;
+    --ink-2: #6b7280;
+    --ink-3: #9ca3af;
+    --bg: #f6f7f9;
+    --line: #e5e9f0;
+    --card: #ffffff;
+    --green: #16a34a;
+    --orange: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif; background: var(--bg); color: var(--ink); }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  header.hero { background: linear-gradient(135deg, #1f6fff 0%, #61a5ff 100%); color: #fff; border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  header.hero h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: 1px; }
+  header.hero p { margin: 0; opacity: 0.92; font-size: 14px; }
+  .badge { display: inline-block; background: rgba(255,255,255,0.22); border-radius: 999px; padding: 2px 12px; font-size: 12px; margin-right: 8px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; margin-bottom: 20px; }
+  section h2 { margin: 0 0 4px; font-size: 17px; }
+  section .sub { color: var(--ink-2); font-size: 13px; margin: 0 0 14px; }
+  .note { color: var(--ink-3); font-size: 12px; }
+
+  /* 分层架构 */
+  .layers { display: flex; flex-direction: column; gap: 10px; }
+  .layer { border-radius: 12px; padding: 12px 14px; }
+  .layer.client { background: var(--brand-light); border: 1px solid #c9dcff; }
+  .layer.edge { background: #fff7ed; border: 1px solid #fde6c4; }
+  .layer.service { background: #eef6ff; border: 1px solid #cfe6ff; }
+  .layer.data { background: #f2fbf5; border: 1px solid #d3f0dd; }
+  .layer.infra { background: #f6f4fe; border: 1px solid #e3ddfa; }
+  .layer .lt { font-weight: 700; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .layer .lt .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .boxes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .box { border-radius: 8px; padding: 8px 12px; font-size: 12.5px; background: #fff; border: 1px solid var(--line); }
+  .box b { color: var(--brand); }
+  .arrow-down { text-align: center; color: var(--ink-3); font-size: 15px; line-height: 1; margin: 1px 0; }
+
+  /* 链路 */
+  .flows { display: flex; flex-wrap: wrap; gap: 14px; }
+  .flow { flex: 1 1 300px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: #fbfcfe; }
+  .flow h3 { margin: 0 0 8px; font-size: 14px; color: var(--brand); }
+  .flow .steps { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; }
+  .flow .s { display: flex; gap: 6px; align-items: baseline; }
+  .flow .s .n { color: var(--brand); font-weight: 700; flex: 0 0 16px; }
+  .flow .s span.t { color: var(--ink-2); }
+
+  /* ER */
+  .er { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .tbl { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 12px; }
+  .tbl .h { background: var(--brand); color: #fff; padding: 6px 10px; font-weight: 600; }
+  .tbl .r { padding: 4px 10px; border-top: 1px solid #f0f2f6; display: flex; justify-content: space-between; }
+  .tbl .r .k { color: var(--ink-2); }
+  .tbl .r .v { color: var(--ink-3); font-size: 11px; }
+
+  .stack { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .sc { border: 1px solid var(--line); border-radius: 10px; padding: 12px; font-size: 12.5px; background: #fbfcfe; }
+  .sc .h { font-weight: 700; margin-bottom: 6px; color: var(--brand); }
+  .sc ul { margin: 0; padding-left: 16px; color: var(--ink-2); }
+  .sc li { margin: 3px 0; }
+
+  table.meta { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.meta th, table.meta td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; }
+  table.meta th { background: #f4f7fb; font-weight: 600; }
+  .foot { color: var(--ink-3); font-size: 12px; text-align: center; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>小蓝书 · 全栈架构可视化</h1>
+    <p>
+      <span class="badge">Android 原生（Kotlin + Compose）</span>
+      <span class="badge">Web（React 18 + Vite）</span>
+      <span class="badge">后端（Java 17 + Spring Boot）</span>
+      <span class="badge">统一 REST API</span>
+    </p>
+    <p>内容种草社区 MVP：信息流 · 笔记发布 · 互动 · 关注 · 搜索 · 通知 · 私信</p>
+  </header>
+
+  <section>
+    <h2>一、分层架构</h2>
+    <p class="sub">三端共用一套 API 契约，服务端为 Spring Boot 模块化单体</p>
+    <div class="layers">
+
+      <div class="layer client">
+        <div class="lt"><span class="dot" style="background:#1f6fff"></span>客户端层</div>
+        <div class="boxes">
+          <div class="box"><b>Android App</b> · Kotlin + Jetpack Compose<br><span style="color:#6b7280">单 Activity · Navigation · Retrofit · Coil</span></div>
+          <div class="box"><b>Web 端</b> · React 18 + Vite + TS<br><span style="color:#6b7280">Zustand · React Router · axios · 双列信息流</span></div>
+        </div>
+      </div>
+      <div class="arrow-down">▼ HTTPS / REST(JSON)</div>
+
+      <div class="layer edge">
+        <div class="lt"><span class="dot" style="background:#f59e0b"></span>接入层（生产 Nginx）</div>
+        <div class="boxes">
+          <div class="box">TLS 终止</div>
+          <div class="box">静态资源托管 <b>web/dist</b></div>
+          <div class="box">反向代理 <b>/api → :3000</b></div>
+          <div class="box">限流 · Gzip</div>
+        </div>
+      </div>
+      <div class="arrow-down">▼</div>
+
+      <div class="layer service">
+        <div class="lt"><span class="dot" style="background:#2563eb"></span>业务服务层 · Spring Boot（Java 17，端口 3000）</div>
+        <div class="boxes">
+          <div class="box"><b>auth</b> 注册/登录/JWT</div>
+          <div class="box"><b>user</b> 主页/关注/资料</div>
+          <div class="box"><b>post</b> 笔记发布/详情</div>
+          <div class="box"><b>feed</b> 推荐/关注信息流</div>
+          <div class="box"><b>interaction</b> 赞/藏</div>
+          <div class="box"><b>comment</b> 评论/楼中楼</div>
+          <div class="box"><b>topic</b> 话题</div>
+          <div class="box"><b>search</b> 搜索</div>
+          <div class="box"><b>notification</b> 通知</div>
+          <div class="box"><b>message</b> 私信</div>
+          <div class="box"><b>upload</b> 图片上传</div>
+          <div class="box"><b>横切</b> CORS · 限流 · 可选登录 · 全局异常</div>
+        </div>
+      </div>
+      <div class="arrow-down">▼</div>
+
+      <div class="layer data">
+        <div class="lt"><span class="dot" style="background:#16a34a"></span>数据层</div>
+        <div class="boxes">
+          <div class="box"><b>H2</b>（开发，MODE=MySQL）</div>
+          <div class="box"><b>MySQL 8</b>（生产）</div>
+          <div class="box">本地磁盘 <b>uploads/</b>（开发）</div>
+          <div class="box"><b>OSS</b>（生产图片）</div>
+        </div>
+      </div>
+      <div class="arrow-down">▼</div>
+
+      <div class="layer infra">
+        <div class="lt"><span class="dot" style="background:#7c3aed"></span>基础设施（演进）</div>
+        <div class="boxes">
+          <div class="box">Redis · 会话/热榜/限流</div>
+          <div class="box">ElasticSearch · 全文搜索</div>
+          <div class="box">MQ · 异步通知/计数</div>
+          <div class="box">WebSocket · 实时私信</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>二、关键业务链路</h2>
+    <p class="sub">接口均为 <code>/api</code> 前缀，统一响应 <code>{code, message, data}</code>（code=0 成功）</p>
+    <div class="flows">
+      <div class="flow">
+        <h3>发布笔记</h3>
+        <div class="steps">
+          <div class="s"><span class="n">1</span><span class="t">客户端选图 → <b>POST /api/upload/image</b>（本地磁盘/OSS 返回 URL）</span></div>
+          <div class="s"><span class="n">2</span><span class="t"><b>POST /api/posts</b> {title, content, images[], topicId}</span></div>
+          <div class="s"><span class="n">3</span><span class="t">事务：写 posts + 话题 post_count+1 + 用户 post_count+1</span></div>
+        </div>
+      </div>
+      <div class="flow">
+        <h3>浏览信息流</h3>
+        <div class="steps">
+          <div class="s"><span class="n">1</span><span class="t"><b>GET /api/feed?tab=recommend|following</b></span></div>
+          <div class="s"><span class="n">2</span><span class="t">关注流：关注者笔记时间倒序</span></div>
+          <div class="s"><span class="n">3</span><span class="t">推荐流：热度分 score = like×3 + comment×5 + view×0.2</span></div>
+          <div class="s"><span class="n">4</span><span class="t">批量组装作者/话题/登录态互动状态</span></div>
+        </div>
+      </div>
+      <div class="flow">
+        <h3>互动与通知</h3>
+        <div class="steps">
+          <div class="s"><span class="n">1</span><span class="t">点赞/收藏/评论/关注写关系表（UNIQUE 幂等）</span></div>
+          <div class="s"><span class="n">2</span><span class="t">同一事务更新冗余计数</span></div>
+          <div class="s"><span class="n">3</span><span class="t">写入 notifications 供接收者查看</span></div>
+        </div>
+      </div>
+      <div class="flow">
+        <h3>搜索</h3>
+        <div class="steps">
+          <div class="s"><span class="n">1</span><span class="t"><b>GET /api/search?q=&amp;type=all|post|user</b></span></div>
+          <div class="s"><span class="n">2</span><span class="t">起步：LIKE 匹配标题/正文/昵称</span></div>
+          <div class="s"><span class="n">3</span><span class="t">演进：ElasticSearch 倒排 + 高亮</span></div>
+        </div>
+      </div>
+      <div class="flow">
+        <h3>私信</h3>
+        <div class="steps">
+          <div class="s"><span class="n">1</span><span class="t">conversations（user_a &lt; user_b，UNIQUE）</span></div>
+          <div class="s"><span class="n">2</span><span class="t">GET/POST /api/conversations/{id}/messages 轮询</span></div>
+          <div class="s"><span class="n">3</span><span class="t">演进：WebSocket 长连接 + 已读回执</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>三、数据模型（ER 概览）</h2>
+    <p class="sub">完整可执行建表脚本：<code>server/src/main/resources/schema.sql</code>（MySQL 兼容方言，H2 以 MODE=MySQL 执行）</p>
+    <div class="er">
+      <div class="tbl">
+        <div class="h">users（用户）</div>
+        <div class="r"><span class="k">phone / password_hash</span><span class="v">登录 + BCrypt</span></div>
+        <div class="r"><span class="k">nickname / avatar / bio</span><span class="v">资料</span></div>
+        <div class="r"><span class="k">following/follower/post_count</span><span class="v">冗余计数</span></div>
+      </div>
+      <div class="tbl">
+        <div class="h">follows</div>
+        <div class="r"><span class="k">user_id → follow_user_id</span><span class="v">关注关系</span></div>
+        <div class="r"><span class="k">UNIQUE 对</span><span class="v">防重复</span></div>
+      </div>
+      <div class="tbl">
+        <div class="h">posts（笔记）</div>
+        <div class="r"><span class="k">user_id → users</span><span class="v">作者</span></div>
+        <div class="r"><span class="k">topic_id → topics</span><span class="v">话题（可空）</span></div>
+        <div class="r"><span class="k">images JSON / status</span><span class="v">多图 · 软删除</span></div>
+        <div class="r"><span class="k">like/collect/comment/view</span><span class="v">冗余计数</span></div>
+      </div>
+      <div class="tbl">
+        <div class="h">topics（话题）</div>
+        <div class="r"><span class="k">name / cover / post_count</span><span class="v">话题聚合</span></div>
+      </div>
+      <div class="tbl">
+        <div class="h">comments（评论）</div>
+        <div class="r"><span class="k">parent_id / reply_to_user_id</span><span class="v">楼中楼</span></div>
+        <div class="r"><span class="k">post_id → posts</span><span class="v">所属笔记</span></div>
+      </div>
+      <div class="tbl">
+        <div class="h">likes / collects</div>
+        <div class="r"><span class="k">user_id + post_id UNIQUE</span><span class="v">幂等</span></div>
+      </div>
+      <div class="tbl">
+        <div class="h">notifications</div>
+        <div class="r"><span class="k">user_id / actor_id</span><span class="v">接收/触发</span></div>
+        <div class="r"><span class="k">type: like/collect/comment/follow</span><span class="v">通知中心</span></div>
+      </div>
+      <div class="tbl">
+        <div class="h">conversations / messages</div>
+        <div class="r"><span class="k">user_a &lt; user_b UNIQUE</span><span class="v">会话</span></div>
+        <div class="r"><span class="k">sender / content / is_read</span><span class="v">消息</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>四、技术栈</h2>
+    <p class="sub">三端各取所长，共用 API 契约</p>
+    <div class="stack">
+      <div class="sc">
+        <div class="h">Android 端（android/）</div>
+        <ul>
+          <li>Kotlin + Jetpack Compose（Material 3）</li>
+          <li>Navigation Compose · 单 Activity</li>
+          <li>Retrofit + OkHttp（自动带 JWT）</li>
+          <li>Coil 图片加载 · ViewModel 状态</li>
+          <li>模拟器访问宿主机：10.0.2.2:3000</li>
+        </ul>
+      </div>
+      <div class="sc">
+        <div class="h">网页端（web/）</div>
+        <ul>
+          <li>React 18 + Vite + TypeScript</li>
+          <li>Zustand 全局状态（登录持久化）</li>
+          <li>React Router v6 · axios 拦截器</li>
+          <li>双列瀑布流 · 蓝色主题（--brand: #1f6fff）</li>
+          <li>dev:5173 代理 /api、/uploads → :3000</li>
+        </ul>
+      </div>
+      <div class="sc">
+        <div class="h">后端（server/）</div>
+        <ul>
+          <li>Java 17 + Spring Boot（Maven Wrapper）</li>
+          <li>JdbcTemplate 显式 SQL · @Transactional</li>
+          <li>JWT（jjwt）+ BCrypt（spring-security-crypto）</li>
+          <li>Bean Validation · 全局异常 · 内存限流</li>
+          <li>H2 开发（MODE=MySQL）/ MySQL 生产</li>
+          <li>自动建表 + 演示数据播种</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>五、开发运行形态</h2>
+    <table class="meta">
+      <tr><th>组件</th><th>启动方式</th><th>地址</th></tr>
+      <tr><td>后端</td><td>server/ 下 <code>.\mvnw.cmd spring-boot:run</code></td><td>http://localhost:3000（自动建表 + 播种）</td></tr>
+      <tr><td>网页端</td><td>web/ 下 <code>npm install && npm run dev</code></td><td>http://localhost:5173</td></tr>
+      <tr><td>Android</td><td>Android Studio 打开 android/ 运行</td><td>模拟器经 10.0.2.2:3000 访问后端</td></tr>
+      <tr><td>演示账号</td><td colspan="2">13800000001 ~ 13800000005 / 123456</td></tr>
+    </table>
+    <p class="note">说明：本图数据与脚本来自仓库实际代码与 schema.sql；生产拓扑（Nginx/Redis/OSS/ES）为演进方向，见 docs/05。</p>
+  </section>
+
+  <div class="foot">小蓝书 · 教学演示工程（未使用小红书品牌素材与接口） · 架构可视化页面</div>
+</div>
+</body>
+</html>
