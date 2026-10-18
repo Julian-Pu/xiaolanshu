@@ -12,8 +12,8 @@ android {
         applicationId = "com.xiaolanshu.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "2.2.0"
+        versionCode = 15
+        versionName = "2.3.0"
 
         // ===== 后端地址配置 =====
         // 默认：本机局域网 IP（本地电脑做服务器，真机与电脑连同一 WiFi 直连，如 192.168.2.6）

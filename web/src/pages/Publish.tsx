@@ -3,6 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { postApi, topicApi, uploadApi } from '../api'
 import type { Topic } from '../models'
 
+/** 预设滤镜（CSS filter，与 Android 端 ColorMatrix 6 种对应） */
+const FILTERS: { name: string; css: string }[] = [
+  { name: '原图', css: 'none' },
+  { name: '鲜明', css: 'saturate(1.5) contrast(1.1)' },
+  { name: '暖阳', css: 'sepia(0.25) saturate(1.3) hue-rotate(-10deg)' },
+  { name: '冷调', css: 'saturate(1.1) hue-rotate(10deg) brightness(1.05)' },
+  { name: '黑白', css: 'grayscale(1)' },
+  { name: '胶片', css: 'sepia(0.15) contrast(1.05) brightness(1.02)' },
+]
+
 export default function Publish() {
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
@@ -18,6 +28,8 @@ export default function Publish() {
   const [uploadingVideo, setUploadingVideo] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
   const [hasDraft, setHasDraft] = useState(false)
+  const [filterTarget, setFilterTarget] = useState<number | null>(null) // 正在加滤镜的图片下标
+  const [applyingFilter, setApplyingFilter] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLInputElement>(null)
   const coverRef = useRef<HTMLInputElement>(null)
@@ -122,6 +134,47 @@ export default function Publish() {
     }
   }
 
+  /** 设为封面：移到列表首位（第一张即封面） */
+  function setCover(idx: number) {
+    setImages((prev) => {
+      if (prev.length <= 1 || idx === 0) return prev
+      const [target] = prev.splice(idx, 1)
+      return [target, ...prev]
+    })
+  }
+
+  /** Canvas 应用滤镜 → 上传替换原图 */
+  async function applyFilter(idx: number, css: string) {
+    const url = images[idx]
+    if (!url || css === 'none') {
+      setFilterTarget(null)
+      return
+    }
+    setApplyingFilter(true)
+    try {
+      const img = new Image()
+      img.src = url
+      await img.decode()
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('画布不可用')
+      ctx.filter = css
+      ctx.drawImage(img, 0, 0)
+      const blob: Blob = await new Promise((resolve, reject) =>
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('导出失败'))), 'image/jpeg', 0.9),
+      )
+      const r = await uploadApi.image(new File([blob], `edited_${Date.now()}.jpg`, { type: 'image/jpeg' }))
+      setImages((prev) => prev.map((u, i) => (i === idx ? r.url : u)))
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setApplyingFilter(false)
+      setFilterTarget(null)
+    }
+  }
+
   async function submit() {
     setError('')
     if (!title.trim() && !content.trim()) {
@@ -174,17 +227,80 @@ export default function Publish() {
         <textarea className="input" value={content} onChange={(e) => setContent(e.target.value)} placeholder="写点什么…" />
       </div>
       <div className="form-item">
-        <label>图片（最多 9 张）</label>
+        <label>图片（最多 9 张，第一张为封面）</label>
         <div className="preview-grid">
           {images.map((url, i) => (
-            <img
-              key={url + i}
-              className="preview-img"
-              src={url}
-              alt=""
-              onClick={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
-              title="点击移除"
-            />
+            <div key={url + i} style={{ position: 'relative' }}>
+              <img
+                className="preview-img"
+                src={url}
+                alt=""
+                onClick={() => setFilterTarget(i)}
+                title="点击加滤镜"
+                style={filterTarget === i ? { outline: '2px solid var(--primary)' } : undefined}
+              />
+              {i === 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    left: 4,
+                    bottom: 4,
+                    background: 'var(--primary)',
+                    color: '#fff',
+                    fontSize: 11,
+                    borderRadius: 4,
+                    padding: '1px 5px',
+                  }}
+                >
+                  封面
+                </span>
+              )}
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  width: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  background: 'rgba(0,0,0,0.55)',
+                  color: '#fff',
+                  fontSize: 12,
+                  lineHeight: '18px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setImages((prev) => prev.filter((_, idx) => idx !== i))
+                }}
+                title="移除"
+              >
+                ×
+              </span>
+              {i > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    left: 4,
+                    top: 2,
+                    fontSize: 11,
+                    color: 'var(--primary)',
+                    background: 'rgba(255,255,255,0.85)',
+                    borderRadius: 4,
+                    padding: '1px 5px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCover(i)
+                  }}
+                  title="设为封面"
+                >
+                  设为封面
+                </span>
+              )}
+            </div>
           ))}
           {images.length < 9 && (
             <div
@@ -205,6 +321,28 @@ export default function Publish() {
             </div>
           )}
         </div>
+        {filterTarget !== null && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+            {FILTERS.map((f) => (
+              <button
+                key={f.name}
+                className="btn"
+                style={{ padding: '2px 10px', fontSize: 12 }}
+                disabled={applyingFilter}
+                onClick={() => applyFilter(filterTarget, f.css)}
+              >
+                {f.name}
+              </button>
+            ))}
+            <button
+              className="btn"
+              style={{ padding: '2px 10px', fontSize: 12 }}
+              onClick={() => setFilterTarget(null)}
+            >
+              取消
+            </button>
+          </div>
+        )}
         <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onPickFiles} />
       </div>
       <div className="form-item">

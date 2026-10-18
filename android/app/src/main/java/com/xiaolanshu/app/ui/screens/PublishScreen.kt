@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -49,6 +50,18 @@ fun PublishScreen(onPublished: (Long) -> Unit, onRequireLogin: () -> Unit) {
     val vm: PublishViewModel = viewModel()
     val ui by vm.ui.collectAsState()
     var imageUrlInput by remember { mutableStateOf("") }
+    var editTarget by remember { mutableStateOf<String?>(null) }
+
+    // 图片编辑弹层（裁剪 + 滤镜），确认后上传替换原图
+    editTarget?.let { url ->
+        androidx.compose.ui.window.Dialog(onDismissRequest = { editTarget = null }) {
+            ImageEditScreen(
+                imageUrl = url,
+                onCancel = { editTarget = null },
+                onConfirm = { jpeg -> vm.replaceImage(url, jpeg) { editTarget = null } },
+            )
+        }
+    }
 
     // 发布成功后跳转详情
     LaunchedEffect(ui.publishedId) {
@@ -58,6 +71,10 @@ fun PublishScreen(onPublished: (Long) -> Unit, onRequireLogin: () -> Unit) {
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetMultipleContents()
     ) { uris: List<Uri> ->
+        if (ui.images.size + uris.size > 9) {
+            vm.showError("最多添加 9 张图片")
+            return@rememberLauncherForActivityResult
+        }
         vm.uploadImages(uris)
     }
 
@@ -103,27 +120,71 @@ fun PublishScreen(onPublished: (Long) -> Unit, onRequireLogin: () -> Unit) {
         )
         Spacer(Modifier.height(16.dp))
 
-        Text("图片（相册选择或粘贴图片链接）", style = MaterialTheme.typography.labelMedium, color = LocalAppColors.current.textTertiary)
+        Text("图片（相册多选，第一张为封面，可编辑裁剪/滤镜）", style = MaterialTheme.typography.labelMedium, color = LocalAppColors.current.textTertiary)
         Spacer(Modifier.height(8.dp))
         if (ui.images.isNotEmpty()) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(ui.images) { url ->
+                    val isCover = ui.images.firstOrNull() == url
                     Box {
                         AsyncImage(
                             model = url,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(96.dp).aspectRatio(1f),
+                            modifier = Modifier.size(96.dp).aspectRatio(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { editTarget = url },
                         )
+                        // 封面角标
+                        if (isCover) {
+                            Text(
+                                "封面",
+                                color = LocalAppColors.current.white,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.align(Alignment.BottomStart).padding(4.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(LocalAppColors.current.brandBlue)
+                                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                            )
+                        }
+                        // 删除
                         Text(
                             "×",
                             color = LocalAppColors.current.white,
                             modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(LocalAppColors.current.textTertiary.copy(alpha = 0.6f))
                                 .clickable { vm.removeImage(url) }
                                 .size(20.dp),
                         )
                     }
                 }
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "点图编辑 · 点击“封面”",
+                    color = LocalAppColors.current.textTertiary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                Text(
+                    "设封面",
+                    color = LocalAppColors.current.brandBlue,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(LocalAppColors.current.brandBlueLight)
+                        .clickable {
+                            val second = ui.images.getOrNull(1) ?: return@clickable
+                            vm.setCover(second)
+                        }
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                )
+                Text(
+                    "数量 ${ui.images.size}/9",
+                    color = LocalAppColors.current.textTertiary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
             }
             Spacer(Modifier.height(8.dp))
         }

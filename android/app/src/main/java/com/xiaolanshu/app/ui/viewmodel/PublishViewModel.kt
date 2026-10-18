@@ -80,6 +80,11 @@ class PublishViewModel(app: Application) : AndroidViewModel(app) {
         saveDraft()
     }
 
+    /** 展示错误提示（如图片数量超限） */
+    fun showError(msg: String) {
+        _ui.value = _ui.value.copy(error = msg)
+    }
+
     /** 粘贴图片链接加入列表 */
     fun addImageUrl(url: String) {
         if (url.isBlank()) return
@@ -90,6 +95,34 @@ class PublishViewModel(app: Application) : AndroidViewModel(app) {
     fun removeImage(url: String) {
         _ui.value = _ui.value.copy(images = _ui.value.images - url)
         saveDraft()
+    }
+
+    /** 设为封面：把该图移到列表首位（后端 images[0] 即封面） */
+    fun setCover(url: String) {
+        val imgs = _ui.value.images
+        if (imgs.size <= 1 || imgs.firstOrNull() == url) return
+        _ui.value = _ui.value.copy(images = listOf(url) + imgs.filter { it != url })
+        saveDraft()
+    }
+
+    /** 图片编辑（裁剪/滤镜）完成后替换：上传编辑结果 → 替换原 URL */
+    fun replaceImage(url: String, jpegBytes: ByteArray, onDone: () -> Unit) {
+        viewModelScope.launch {
+            runCatching {
+                val part = MultipartBody.Part.createFormData(
+                    "file",
+                    "edited_${System.currentTimeMillis()}.jpg",
+                    jpegBytes.toRequestBody("image/jpeg".toMediaType()),
+                )
+                UploadRepository.image(part).data?.url
+            }.onSuccess { newUrl ->
+                if (newUrl != null) {
+                    _ui.value = _ui.value.copy(images = _ui.value.images.map { if (it == url) newUrl else it })
+                    saveDraft()
+                }
+            }.onFailure { _ui.value = _ui.value.copy(error = it.message ?: "图片编辑上传失败") }
+            onDone()
+        }
     }
 
     fun clearDraft() {
