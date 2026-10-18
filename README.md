@@ -116,6 +116,8 @@ npm run dev     # http://localhost:5173
 - [x] 技术债修复：Android 跨页状态共享（AppState 全局 StateFlow，消息角标跨页即时同步）
 - [x] 安全加固：JWT 密钥 env 化 + 启动校验、管理接口 X-Admin-Key 保护、验证码防爆破（5 次失败锁 5 分钟）、限流 env 化
 - [x] 合规：Web 隐私政策 / 用户协议页（登录页链接）+ Android 登录同意提示
+- [x] 分享深链：分享文案带 `xls://post/{id}`，App 接收即直达笔记详情（未登录先登录再跳）
+- [x] 通知点击路由：通知列表/系统通知点击按类型跳转（赞/藏/评→笔记详情，关注→用户主页，Android + Web）
 
 ## 五、文档索引
 

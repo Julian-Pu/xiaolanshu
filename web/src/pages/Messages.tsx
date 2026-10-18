@@ -140,7 +140,11 @@ export default function Messages() {
           {notifs.length === 0 && <div className="empty">暂无通知</div>}
           {notifs.map((n) => (
             <div key={n.id} className="notif-item" style={{ cursor: n.refId ? 'pointer' : 'default' }}
-              onClick={() => n.refId && navigate(`/post/${n.refId}`)}>
+              onClick={() => {
+                if (!n.refId) return
+                // like/collect/comment → 笔记详情；follow → 用户主页
+                navigate(n.type === 'follow' ? `/profile/${n.refId}` : `/post/${n.refId}`)
+              }}>
               {!n.isRead && <span className="notif-dot" />}
               <img className="avatar-sm" src={n.actor?.avatar ?? ''} alt="" />
               <div style={{ flex: 1, minWidth: 0 }}>

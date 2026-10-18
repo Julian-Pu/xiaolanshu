@@ -159,7 +159,9 @@ fun PostDetailScreen(
                                             type = "text/plain"
                                             putExtra(
                                                 Intent.EXTRA_TEXT,
-                                                "【小蓝书】${d.title ?: "分享一条笔记"}\n${BuildConfig.API_BASE_URL.trimEnd('/')}/post/$postId",
+                                                "【小蓝书】${d.title ?: "分享一条笔记"}\n" +
+                                                    "App 打开：xls://post/$postId\n" +
+                                                    "网页打开：${BuildConfig.API_BASE_URL.trimEnd('/')}/post/$postId",
                                             )
                                         }
                                         runCatching { context.startActivity(Intent.createChooser(send, "分享到")) }

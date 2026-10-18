@@ -54,17 +54,30 @@ import com.xiaolanshu.app.ui.screens.TopicPostsScreen
 import com.xiaolanshu.app.ui.screens.UserListScreen
 import kotlinx.coroutines.launch
 
-/** 应用路由 */
+/** 应用路由。pendingRoute：分享深链（如 "post/5"），未登录时先登录、成功后跳转 */
 @Composable
-fun AppNav() {
+fun AppNav(pendingRoute: String? = null) {
     val nav: NavHostController = rememberNavController()
     val start = if (AuthStore.get().token == null) "login" else "main"
+    // 深链导航（已登录时直接跳）
+    LaunchedEffect(pendingRoute) {
+        if (pendingRoute != null && AuthStore.get().token != null) {
+            nav.navigate(pendingRoute) { launchSingleTop = true }
+        }
+    }
     NavHost(navController = nav, startDestination = start) {
         composable("login") {
             LoginScreen(onSuccess = {
                 AppState.reset() // 切换账号清空跨页角标
-                nav.navigate("main") {
-                    popUpTo("login") { inclusive = true }
+                if (pendingRoute != null) {
+                    // 深链目标：登录成功直接进入（登录页出栈，避免返回登录页）
+                    nav.navigate(pendingRoute) {
+                        popUpTo("login") { inclusive = true }
+                    }
+                } else {
+                    nav.navigate("main") {
+                        popUpTo("login") { inclusive = true }
+                    }
                 }
             })
         }
@@ -76,6 +89,12 @@ fun AppNav() {
                 onOpenFollowing = { nav.navigate("following/$it") },
                 onOpenSettings = { nav.navigate("settings") },
                 onOpenHistory = { nav.navigate("history") },
+                onOpenNotif = { type, refId ->
+                    // like/collect/comment → 笔记详情；follow → 用户主页
+                    if (refId != null) {
+                        nav.navigate(if (type == "follow") "profile/$refId" else "post/$refId")
+                    }
+                },
                 onRequireLogin = {
                     nav.navigate("login") {
                         popUpTo("main") { inclusive = true }
@@ -168,6 +187,7 @@ private fun MainScreen(
     onOpenFollowing: (Long) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenNotif: (String, Long?) -> Unit,
     onRequireLogin: () -> Unit,
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -225,6 +245,7 @@ private fun MainScreen(
                 2 -> PublishScreen(onPublished = onOpenPost, onRequireLogin = onRequireLogin)
                 3 -> MessageScreen(
                     onOpenUser = onOpenUser,
+                    onNotifClick = onOpenNotif,
                     // 未读数已由 ViewModel 写全局 AppState（跨页角标自动更新），无需回调传参
                 )
                 else -> ProfileScreen(

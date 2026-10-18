@@ -100,7 +100,7 @@ private val NOTIF_TYPES = listOf(
 )
 
 @Composable
-fun MessageScreen(onOpenUser: (Long) -> Unit, onUnreadChange: (Int) -> Unit = {}) {
+fun MessageScreen(onOpenUser: (Long) -> Unit, onNotifClick: (String, Long?) -> Unit = { _, _ -> }, onUnreadChange: (Int) -> Unit = {}) {
     var tab by rememberSaveable { mutableIntStateOf(0) } // 0 通知 1 私信
     var notifType by remember { mutableStateOf<String?>(null) }
     var input by remember { mutableStateOf("") }
@@ -274,7 +274,9 @@ fun MessageScreen(onOpenUser: (Long) -> Unit, onUnreadChange: (Int) -> Unit = {}
                 LazyColumn {
                     items(ui.notifications, key = { it.id }) { n ->
                         Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onNotifClick(n.type, n.refId) },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Avatar(n.actor?.avatar, size = 40.dp)
