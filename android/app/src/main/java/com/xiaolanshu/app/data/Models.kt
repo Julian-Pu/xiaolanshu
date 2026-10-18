@@ -134,6 +134,9 @@ data class LikeResult(val liked: Boolean, val likeCount: Int)
 
 data class CollectResult(val collected: Boolean, val collectCount: Int)
 
+/** 举报结果：duplicated=true 表示已提交过同类举报 */
+data class ReportResult(val id: Long, val duplicated: Boolean = false)
+
 data class UploadResult(val url: String, val thumbUrl: String? = null)
 
 /** 收藏专辑 */

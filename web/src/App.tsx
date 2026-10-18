@@ -11,6 +11,8 @@ import Albums from './pages/Albums'
 import History from './pages/History'
 import Messages from './pages/Messages'
 import Login from './pages/Login'
+import Forgot from './pages/Forgot'
+import Admin from './pages/Admin'
 import Settings from './pages/Settings'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
@@ -29,6 +31,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot" element={<Forgot />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route element={<Layout />}>

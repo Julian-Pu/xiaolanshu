@@ -3,6 +3,7 @@ package com.xiaolanshu.auth;
 import com.xiaolanshu.auth.dto.AuthView;
 import com.xiaolanshu.auth.dto.LoginRequest;
 import com.xiaolanshu.auth.dto.RegisterRequest;
+import com.xiaolanshu.auth.dto.ResetPasswordRequest;
 import com.xiaolanshu.auth.dto.SmsCodeRequest;
 import com.xiaolanshu.common.ApiResponse;
 import com.xiaolanshu.common.CurrentUser;
@@ -44,6 +45,13 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<AuthView> login(@Valid @RequestBody LoginRequest req) {
         return ApiResponse.ok(authService.login(req));
+    }
+
+    /** 忘记密码：短信验证码校验通过后重置密码（验证码复用 /api/auth/sms-code 发送） */
+    @PostMapping("/reset-password")
+    public ApiResponse<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
+        authService.resetPassword(req);
+        return ApiResponse.ok(Map.of("message", "密码已重置，请重新登录"));
     }
 
     @GetMapping("/me")

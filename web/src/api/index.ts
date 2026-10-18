@@ -1,5 +1,9 @@
 import { del, get, post, put } from './http'
+import axios from 'axios'
 import type {
+  AdminPage,
+  AdminPost,
+  AdminStats,
   Album,
   CommentItem,
   Conversation,
@@ -9,6 +13,7 @@ import type {
   PageResult,
   PostCard,
   PostDetail,
+  ReportItem,
   SearchResult,
   Topic,
   User,
@@ -21,7 +26,14 @@ export const authApi = {
     post<{ code: string }>('/auth/sms-code', d),
   login: (d: { phone: string; password: string }) =>
     post<{ token: string; user: User }>('/auth/login', d),
+  resetPassword: (d: { phone: string; smsCode: string; newPassword: string }) =>
+    post<{ message: string }>('/auth/reset-password', d),
   me: () => get<User>('/auth/me'),
+}
+
+export const reportApi = {
+  create: (d: { postId: number; reason: string; detail?: string }) =>
+    post<{ id: number; duplicated: boolean }>('/reports', d),
 }
 
 export const userApi = {
@@ -124,6 +136,47 @@ export const messageApi = {
   send: (id: number, content: string) =>
     post<Message>(`/conversations/${id}/messages`, { content }),
   markRead: (id: number) => post<{ changed: number }>(`/conversations/${id}/read`),
+}
+
+interface ApiBody<T> {
+  code: number
+  message: string
+  data: T
+}
+
+/** 管理后台请求：全部携带 X-Admin-Key，密钥来自管理登录 */
+async function adminReq<T>(
+  method: 'get' | 'post' | 'delete',
+  url: string,
+  key: string,
+  data?: unknown,
+  params?: Record<string, unknown>,
+): Promise<T> {
+  const res = await axios.request<ApiBody<T>>({
+    method,
+    url: '/api' + url,
+    headers: { 'X-Admin-Key': key },
+    data,
+    params,
+    timeout: 15000,
+  })
+  const body = res.data
+  if (body && typeof body.code === 'number' && body.code !== 0) {
+    throw new Error(body.message || '请求失败')
+  }
+  return body.data
+}
+
+export const adminApi = {
+  stats: (key: string) => adminReq<AdminStats>('get', '/admin/stats', key),
+  reports: (key: string, status = '', page = 1, size = 20) =>
+    adminReq<AdminPage<ReportItem>>('get', '/admin/reports', key, undefined, { status, page, size }),
+  review: (key: string, id: number, action: 'APPROVE' | 'IGNORE') =>
+    adminReq<{ id: number }>('post', `/admin/reports/${id}/review`, key, { action }),
+  posts: (key: string, page = 1, size = 20) =>
+    adminReq<AdminPage<AdminPost>>('get', '/admin/posts', key, undefined, { page, size }),
+  deletePost: (key: string, id: number) =>
+    adminReq<{ id: number }>('delete', `/admin/posts/${id}`, key),
 }
 
 export const uploadApi = {

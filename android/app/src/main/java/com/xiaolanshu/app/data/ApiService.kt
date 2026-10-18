@@ -23,6 +23,12 @@ interface ApiService {
     @POST("api/auth/login")
     suspend fun login(@Body body: Map<String, String>): ApiResponse<AuthData>
 
+    @POST("api/auth/reset-password")
+    suspend fun resetPassword(@Body body: Map<String, String>): ApiResponse<Map<String, String>>
+
+    @POST("api/reports")
+    suspend fun report(@Body body: Map<String, String>): ApiResponse<ReportResult>
+
     @GET("api/auth/me")
     suspend fun me(): ApiResponse<User>
 

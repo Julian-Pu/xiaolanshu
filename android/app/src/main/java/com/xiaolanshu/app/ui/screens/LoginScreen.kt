@@ -1,6 +1,7 @@
 package com.xiaolanshu.app.ui.screens
 import com.xiaolanshu.app.ui.theme.LocalAppColors
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -26,6 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +45,7 @@ import com.xiaolanshu.app.ui.viewmodel.LoginViewModel
 fun LoginScreen(onSuccess: () -> Unit) {
     val vm: LoginViewModel = viewModel()
     val ui by vm.ui.collectAsState()
+    var showResetDialog by remember { mutableStateOf(false) }
 
     // 登录/注册成功后回调导航
     LaunchedEffect(ui.success) {
@@ -131,6 +137,14 @@ fun LoginScreen(onSuccess: () -> Unit) {
                 TextButton(onClick = { vm.switchMode() }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                     Text(if (ui.mode) "没有账号？立即注册" else "已有账号？去登录", color = LocalAppColors.current.brandBlue)
                 }
+                if (ui.mode) {
+                    TextButton(
+                        onClick = { showResetDialog = true },
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                    ) {
+                        Text("忘记密码？", color = LocalAppColors.current.textTertiary)
+                    }
+                }
                 Text(
                     "演示账号：13800000001~5 / 123456",
                     color = LocalAppColors.current.textTertiary,
@@ -145,5 +159,95 @@ fun LoginScreen(onSuccess: () -> Unit) {
                 )
             }
         }
+    }
+
+    // 忘记密码：手机号 + 短信验证码 + 新密码（验证码复用登录页获取逻辑）
+    if (showResetDialog) {
+        var newPassword by remember { mutableStateOf("") }
+        var resetMsg by remember { mutableStateOf("") }
+        var resetting by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { if (!resetting) showResetDialog = false },
+            title = { Text("忘记密码") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = ui.phone,
+                        onValueChange = vm::setPhone,
+                        label = { Text("手机号") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = ui.smsCode,
+                            onValueChange = vm::setSmsCode,
+                            label = { Text("短信验证码") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        OutlinedButton(
+                            onClick = { vm.sendSms() },
+                            enabled = !resetting && !ui.sendingSms,
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            Text(if (ui.sendingSms) "发送中…" else "获取验证码", fontSize = 13.sp)
+                        }
+                    }
+                    if (ui.smsHint.isNotBlank()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(ui.smsHint, color = LocalAppColors.current.textTertiary, fontSize = 11.sp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        label = { Text("新密码（至少 6 位）") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (resetMsg.isNotBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(resetMsg, color = LocalAppColors.current.dangerRed, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                Text(
+                    if (resetting) "提交中…" else "重置密码",
+                    color = LocalAppColors.current.brandBlue,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .clickable(enabled = !resetting) {
+                            resetting = true
+                            vm.resetPassword(ui.phone, ui.smsCode, newPassword) { err ->
+                                resetting = false
+                                if (err == null) {
+                                    showResetDialog = false
+                                    vm.setPassword("")
+                                    vm.setSmsCode("")
+                                    vm.setError("密码已重置，请用新密码登录")
+                                } else {
+                                    resetMsg = err
+                                }
+                            }
+                        },
+                )
+            },
+            dismissButton = {
+                Text(
+                    "取消",
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .clickable(enabled = !resetting) { showResetDialog = false },
+                )
+            },
+        )
     }
 }

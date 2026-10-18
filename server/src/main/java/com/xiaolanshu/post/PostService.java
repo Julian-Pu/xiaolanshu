@@ -204,6 +204,24 @@ public class PostService {
         postCache.evict(id);
     }
 
+    /** 管理端强制删除（无属主校验）：软删 + 计数回退 + 缓存驱逐 */
+    @Transactional
+    public void forceDelete(long id) {
+        List<Map<String, Object>> rows = jdbc.queryForList("SELECT * FROM posts WHERE id = ?", id);
+        if (rows.isEmpty() || "deleted".equals(rows.get(0).get("status"))) {
+            throw ApiException.notFound("笔记不存在或已删除");
+        }
+        Map<String, Object> post = rows.get(0);
+        jdbc.update("UPDATE posts SET status = 'deleted', updated_at = ? WHERE id = ?", Instant.now().toString(), id);
+        long authorId = ((Number) post.get("user_id")).longValue();
+        jdbc.update("UPDATE users SET post_count = GREATEST(post_count - 1, 0) WHERE id = ?", authorId);
+        Number topicId = (Number) post.get("topic_id");
+        if (topicId != null) {
+            jdbc.update("UPDATE topics SET post_count = GREATEST(post_count - 1, 0) WHERE id = ?", topicId.longValue());
+        }
+        postCache.evict(id);
+    }
+
     public PageResult<PostCardView> userPosts(long userId, PageParams pp, Long viewerId) {
         Long total = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM posts WHERE user_id = ? AND status = 'published'", Long.class, userId);

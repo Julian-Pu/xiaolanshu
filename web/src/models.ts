@@ -115,3 +115,43 @@ export interface Album {
   postCount: number
   createdAt: string
 }
+
+// ---- 举报 / 管理后台 ----
+export interface ReportItem {
+  id: number
+  post_id: number
+  reason: string
+  detail: string | null
+  status: 'PENDING' | 'APPROVED' | 'IGNORED'
+  created_at: string
+  handled_at: string | null
+  post_title: string | null
+  post_status: string
+  reporter_nickname: string
+}
+
+export interface AdminStats {
+  userCount: number
+  postCount: number
+  pendingReports: number
+  commentCount: number
+}
+
+export interface AdminPost {
+  id: number
+  title: string | null
+  status: string
+  like_count: number
+  collect_count: number
+  comment_count: number
+  view_count: number
+  created_at: string
+  author_nickname: string
+}
+
+export interface AdminPage<T> {
+  list: T[]
+  page: number
+  size: number
+  total: number
+}

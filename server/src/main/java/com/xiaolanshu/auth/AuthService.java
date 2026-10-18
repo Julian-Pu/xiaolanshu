@@ -3,6 +3,7 @@ package com.xiaolanshu.auth;
 import com.xiaolanshu.auth.dto.AuthView;
 import com.xiaolanshu.auth.dto.LoginRequest;
 import com.xiaolanshu.auth.dto.RegisterRequest;
+import com.xiaolanshu.auth.dto.ResetPasswordRequest;
 import com.xiaolanshu.common.ApiException;
 import com.xiaolanshu.security.JwtUtil;
 import com.xiaolanshu.user.dto.UserView;
@@ -63,6 +64,20 @@ public class AuthService {
         Map<String, Object> row = rows.get(0);
         long id = ((Number) row.get("id")).longValue();
         return new AuthView(jwtUtil.sign(id, req.phone()), toView(row, false));
+    }
+
+    /** 忘记密码：短信验证码校验通过后重置密码（验证码防爆破由 SmsCodeService 内建） */
+    public void resetPassword(ResetPasswordRequest req) {
+        if (!smsCodeService.verify(req.phone(), req.smsCode())) {
+            throw ApiException.badRequest("验证码错误或已过期");
+        }
+        List<Map<String, Object>> rows = jdbc.queryForList("SELECT id FROM users WHERE phone = ?", req.phone());
+        if (rows.isEmpty()) {
+            throw ApiException.notFound("该手机号未注册");
+        }
+        long id = ((Number) rows.get(0).get("id")).longValue();
+        jdbc.update("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
+                encoder.encode(req.newPassword()), Instant.now().toString(), id);
     }
 
     public UserView findUser(long id) {

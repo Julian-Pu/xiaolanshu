@@ -80,6 +80,8 @@ fun PostDetailScreen(
     val ui by vm.ui.collectAsState()
     val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
+    var reportMsg by remember { mutableStateOf("") }
 
     if (ui.loading) {
         LoadingView()
@@ -168,6 +170,17 @@ fun PostDetailScreen(
                                     }
                                     .padding(horizontal = 6.dp, vertical = 2.dp),
                             )
+                            if (me != null) {
+                                Text(
+                                    "举报",
+                                    color = LocalAppColors.current.dangerRed,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .clickable { showReportDialog = true }
+                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                                )
+                            }
                         }
                         IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "返回") }
                     }
@@ -301,8 +314,7 @@ fun PostDetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("删除笔记") },
-            text = { Text("删除后不可恢复，确定删除这条笔记吗？") },
+            title = { Text("删除笔记") },            text = { Text("删除后不可恢复，确定删除这条笔记吗？") },
             confirmButton = {
                 Text(
                     "删除",
@@ -325,6 +337,83 @@ fun PostDetailScreen(
                     modifier = Modifier
                         .padding(12.dp)
                         .clickable { showDeleteDialog = false },
+                )
+            },
+        )
+    }
+
+    // 举报对话框（理由单选 + 可选补充说明）
+    if (showReportDialog) {
+        val reasons = listOf(
+            "spam" to "垃圾广告 / 营销",
+            "porn" to "色情低俗",
+            "illegal" to "违法违规",
+            "other" to "其他问题",
+        )
+        var reason by remember { mutableStateOf(reasons[0].first) }
+        var detail by remember { mutableStateOf("") }
+        var submitting by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { if (!submitting) showReportDialog = false },
+            title = { Text("举报笔记") },
+            text = {
+                Column {
+                    reasons.forEach { (value, label) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { reason = value }
+                                .padding(vertical = 2.dp),
+                        ) {
+                            androidx.compose.material3.RadioButton(
+                                selected = reason == value,
+                                onClick = { reason = value },
+                            )
+                            Text(label, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = detail,
+                        onValueChange = { detail = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("补充说明（可选）") },
+                        maxLines = 3,
+                    )
+                    if (reportMsg.isNotBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(reportMsg, color = if (reportMsg.startsWith("已")) LocalAppColors.current.textSecondary else LocalAppColors.current.dangerRed, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                Text(
+                    if (submitting) "提交中…" else "提交举报",
+                    color = LocalAppColors.current.dangerRed,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .clickable(enabled = !submitting) {
+                            submitting = true
+                            vm.report(reason, detail.trim()) { err ->
+                                submitting = false
+                                if (err == null) {
+                                    reportMsg = "已收到举报，感谢你的反馈"
+                                    showReportDialog = false
+                                } else {
+                                    reportMsg = err
+                                }
+                            }
+                        },
+                )
+            },
+            dismissButton = {
+                Text(
+                    "取消",
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .clickable(enabled = !submitting) { showReportDialog = false },
                 )
             },
         )

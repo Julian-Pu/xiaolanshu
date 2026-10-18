@@ -55,6 +55,15 @@ class PostDetailViewModel(private val postId: Long) : ViewModel() {
         }
     }
 
+    /** 举报笔记：onDone(null) 成功；非 null 为错误信息 */
+    fun report(reason: String, detail: String, onDone: (String?) -> Unit) {
+        viewModelScope.launch {
+            runCatching { PostRepository.report(postId, reason, detail) }
+                .onSuccess { onDone(if (it.code == 0) null else it.message) }
+                .onFailure { onDone(it.message ?: "网络错误") }
+        }
+    }
+
     fun toggleLike(onRequireLogin: () -> Unit) {
         val d = _ui.value.detail ?: return
         if (AuthStore.get().token == null) { onRequireLogin(); return }

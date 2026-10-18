@@ -179,3 +179,17 @@ CREATE TABLE IF NOT EXISTS recommend_candidates (
   PRIMARY KEY (user_id, post_id)
 );
 CREATE INDEX IF NOT EXISTS idx_rc_user_score ON recommend_candidates (user_id, score DESC);
+
+-- 用户举报：举报笔记（管理后台审核，APPROVED 时笔记置 deleted）
+CREATE TABLE IF NOT EXISTS reports (
+  id         BIGINT PRIMARY KEY AUTO_INCREMENT,
+  post_id    BIGINT NOT NULL,
+  user_id    BIGINT NOT NULL,           -- 举报人
+  reason     VARCHAR(20) NOT NULL,      -- spam | porn | illegal | other
+  detail     VARCHAR(500),
+  status     VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- PENDING / APPROVED / IGNORED
+  created_at VARCHAR(32) NOT NULL,
+  handled_at VARCHAR(32)
+);
+CREATE INDEX IF NOT EXISTS idx_reports_status ON reports (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reports_post ON reports (post_id);

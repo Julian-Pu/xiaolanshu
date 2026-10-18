@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { authApi } from '../api'
 import { useAuth } from '../store/auth'
 
@@ -131,6 +131,11 @@ export default function Login() {
             {mode === 'login' ? '立即注册' : '去登录'}
           </a>
         </div>
+        {mode === 'login' && (
+          <div style={{ textAlign: 'center', marginTop: 8, fontSize: 13 }}>
+            <Link to="/forgot" style={{ color: 'var(--text-3)' }}>忘记密码？</Link>
+          </div>
+        )}
         <div className="text-3" style={{ marginTop: 12, fontSize: 12, textAlign: 'center' }}>
           演示账号：13800000001~5 / 123456
         </div>

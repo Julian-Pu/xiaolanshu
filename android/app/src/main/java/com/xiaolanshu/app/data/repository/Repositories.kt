@@ -6,6 +6,7 @@ import com.xiaolanshu.app.data.Album
 import com.xiaolanshu.app.data.AuthData
 import com.xiaolanshu.app.data.CollectResult
 import com.xiaolanshu.app.data.CommentItem
+import com.xiaolanshu.app.data.ReportResult
 import com.xiaolanshu.app.data.Conversation
 import com.xiaolanshu.app.data.HotWord
 import com.xiaolanshu.app.data.LikeResult
@@ -54,6 +55,9 @@ object PostRepository {
 
     suspend fun addComment(id: Long, body: Map<String, Any?>): ApiResponse<CommentItem> =
         ApiClient.api().addComment(id, body)
+
+    suspend fun report(postId: Long, reason: String, detail: String): ApiResponse<ReportResult> =
+        ApiClient.api().report(mapOf("postId" to postId.toString(), "reason" to reason, "detail" to detail))
 }
 
 object UserRepository {
@@ -131,6 +135,9 @@ object AuthRepository {
     suspend fun register(body: Map<String, String>): ApiResponse<AuthData> = ApiClient.api().register(body)
 
     suspend fun sendSmsCode(body: Map<String, String>): ApiResponse<SmsCodeData> = ApiClient.api().sendSmsCode(body)
+
+    suspend fun resetPassword(body: Map<String, String>): ApiResponse<Map<String, String>> =
+        ApiClient.api().resetPassword(body)
 
     suspend fun me(): ApiResponse<User> = ApiClient.api().me()
 }

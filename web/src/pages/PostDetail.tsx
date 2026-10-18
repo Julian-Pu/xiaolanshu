@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { postApi } from '../api'
+import { postApi, reportApi } from '../api'
 import type { CommentItem, PostDetail } from '../models'
 import { timeAgo, useAuth } from '../store/auth'
 import CommentItemView from '../components/CommentItem'
 import FollowButton from '../components/FollowButton'
+
+const REPORT_REASONS = [
+  ['spam', '垃圾广告 / 营销'],
+  ['porn', '色情低俗'],
+  ['illegal', '违法违规'],
+  ['other', '其他问题'],
+] as [string, string][]
 
 export default function PostDetail() {
   const { id } = useParams()
@@ -22,6 +29,11 @@ export default function PostDetail() {
   const [commentText, setCommentText] = useState('')
   const [replyTo, setReplyTo] = useState<{ commentId: number; name: string } | null>(null)
   const [busy, setBusy] = useState(false)
+  const [showReport, setShowReport] = useState(false)
+  const [reportReason, setReportReason] = useState('spam')
+  const [reportDetail, setReportDetail] = useState('')
+  const [reportMsg, setReportMsg] = useState('')
+  const [reporting, setReporting] = useState(false)
   const loaded = useRef(false)
 
   const load = useCallback(async () => {
@@ -156,21 +168,104 @@ export default function PostDetail() {
               </button>
             </>
           ) : (
-            <button
-              className="btn"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(`【小蓝书】${post.title ?? '分享一条笔记'} ${location.origin}/post/${post.id}`)
-                  alert('链接已复制，去分享吧～')
-                } catch {
-                  alert('复制失败，请手动复制地址栏链接')
-                }
-              }}
-            >
-              分享
-            </button>
+            <>
+              <button
+                className="btn"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(`【小蓝书】${post.title ?? '分享一条笔记'} ${location.origin}/post/${post.id}`)
+                    alert('链接已复制，去分享吧～')
+                  } catch {
+                    alert('复制失败，请手动复制地址栏链接')
+                  }
+                }}
+              >
+                分享
+              </button>
+              {token && (
+                <button
+                  className="btn btn-danger"
+                  onClick={() => {
+                    setReportMsg('')
+                    setReportReason('spam')
+                    setReportDetail('')
+                    setShowReport(true)
+                  }}
+                >
+                  举报
+                </button>
+              )}
+            </>
           )}
         </div>
+
+        {/* 举报弹层 */}
+        {showReport && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 100,
+              padding: 16,
+            }}
+            onClick={() => !reporting && setShowReport(false)}
+          >
+            <div
+              className="card"
+              style={{ width: '100%', maxWidth: 400, padding: 20 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{ margin: '0 0 12px' }}>举报笔记</h3>
+              {REPORT_REASONS.map(([value, label]) => (
+                <label key={value} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                  <input type="radio" name="report-reason" checked={reportReason === value} onChange={() => setReportReason(value)} />
+                  <span style={{ fontSize: 14 }}>{label}</span>
+                </label>
+              ))}
+              <input
+                className="input"
+                style={{ marginTop: 12 }}
+                value={reportDetail}
+                onChange={(e) => setReportDetail(e.target.value)}
+                placeholder="补充说明（可选）"
+                maxLength={500}
+              />
+              {reportMsg && (
+                <div style={{ color: reportMsg.startsWith('已') ? 'var(--text-3)' : 'var(--danger)', fontSize: 13, marginTop: 8 }}>
+                  {reportMsg}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+                <button className="btn" disabled={reporting} onClick={() => setShowReport(false)}>
+                  取消
+                </button>
+                <button
+                  className="btn btn-danger"
+                  disabled={reporting}
+                  onClick={async () => {
+                    setReporting(true)
+                    setReportMsg('')
+                    try {
+                      await reportApi.create({ postId: Number(id), reason: reportReason, detail: reportDetail.trim() })
+                      setReportMsg('已收到举报，感谢你的反馈')
+                      setTimeout(() => setShowReport(false), 900)
+                    } catch (err) {
+                      setReportMsg((err as Error).message)
+                    } finally {
+                      setReporting(false)
+                    }
+                  }}
+                >
+                  {reporting ? '提交中…' : '提交举报'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {post.images.length > 1 && (
           <div className="thumb-row">

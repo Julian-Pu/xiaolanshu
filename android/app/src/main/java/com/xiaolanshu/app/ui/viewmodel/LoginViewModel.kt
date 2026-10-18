@@ -31,9 +31,31 @@ class LoginViewModel : ViewModel() {
     fun setPassword(v: String) { _ui.value = _ui.value.copy(password = v) }
     fun setNickname(v: String) { _ui.value = _ui.value.copy(nickname = v) }
     fun setSmsCode(v: String) { _ui.value = _ui.value.copy(smsCode = v) }
+    fun setError(v: String) { _ui.value = _ui.value.copy(error = v) }
 
     fun switchMode() {
         _ui.value = _ui.value.copy(mode = !_ui.value.mode, error = "")
+    }
+
+    /** 忘记密码：验证码校验通过后重置密码；onDone(null)=成功 */
+    fun resetPassword(phone: String, code: String, newPassword: String, onDone: (String?) -> Unit) {
+        if (!phone.matches(Regex("^1\\d{10}$"))) {
+            onDone("请输入正确的 11 位手机号")
+            return
+        }
+        if (newPassword.length < 6) {
+            onDone("新密码至少 6 位")
+            return
+        }
+        viewModelScope.launch {
+            runCatching {
+                AuthRepository.resetPassword(
+                    mapOf("phone" to phone, "smsCode" to code, "newPassword" to newPassword),
+                )
+            }
+                .onSuccess { onDone(if (it.code == 0) null else it.message) }
+                .onFailure { onDone(it.message ?: "网络错误") }
+        }
     }
 
     fun sendSms() {

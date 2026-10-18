@@ -36,6 +36,7 @@
 | POST | /api/auth/sms-code | 发送短信验证码 `{phone}` → `{code}`（开发模式 code 为明文，便于联调） | - |
 | POST | /api/auth/register | 注册 `{phone, password, nickname, smsCode}` → `{token, user}` | - |
 | POST | /api/auth/login | 登录 `{phone, password}` → `{token, user}` | - |
+| POST | /api/auth/reset-password | 忘记密码 `{phone, smsCode, newPassword}` → 重置密码（验证码校验通过后生效，旧密码立即失效） | - |
 | GET | /api/auth/me | 当前用户信息 | ✅ |
 
 > 短信验证码：当前为开发模式（未接运营商短信通道）。验证码由后端生成（6 位数字），优先写入 Redis（key `sms:code:{phone}`，TTL 默认 5 分钟），并打印到后端控制台日志；Redis 不可用时自动降级进程内存并告警。`xiaolanshu.sms.debug=true` 时验证码随接口响应返回；生产置 `false` 并接入真实短信网关。注册校验通过后验证码即作废（一次性）。
@@ -122,10 +123,15 @@
 
 | 方法 | 路径 | 说明 | 鉴权 |
 |---|---|---|---|
-| POST | /api/admin/reconcile-counts | 手动触发计数对账（重算 like/collect/comment 计数与话题笔记数）→ `{changedRows, evictedCount}`（对账后驱逐变更笔记热点缓存） | 无 |
-| POST | /api/admin/rebuild-material | 手动重建推荐离线物料池（每用户 TopN 候选）→ `{users, candidates}` | 无 |
-| POST | /api/admin/warm-hot-feed | 手动预热推荐热点榜（全局热度 TopN → Redis ZSET）→ `{warmed}` | 无 |
-| GET | /api/admin/audit/logs | 内容安全审核日志（最近 50 条，含命中词/用户/片段，供人工复核） | 无 |
+| POST | /api/admin/reconcile-counts | 手动触发计数对账（重算 like/collect/comment 计数与话题笔记数）→ `{changedRows, evictedCount}`（对账后驱逐变更笔记热点缓存） | X-Admin-Key |
+| POST | /api/admin/rebuild-material | 手动重建推荐离线物料池（每用户 TopN 候选）→ `{users, candidates}` | X-Admin-Key |
+| POST | /api/admin/warm-hot-feed | 手动预热推荐热点榜（全局热度 TopN → Redis ZSET）→ `{warmed}` | X-Admin-Key |
+| GET | /api/admin/audit/logs | 内容安全审核日志（最近 50 条，含命中词/用户/片段，供人工复核） | X-Admin-Key |
+| GET | /api/admin/stats | 管理概览统计 → `{userCount, postCount, pendingReports, commentCount}` | X-Admin-Key |
+| GET | /api/admin/reports | 举报列表（`?status=PENDING/APPROVED/IGNORED`，缺省全部，分页）→ `{list, page, size, total}`，含笔记标题/举报人昵称 | X-Admin-Key |
+| POST | /api/admin/reports/{id}/review | 举报审核 `{action: APPROVE\|IGNORE}`；APPROVE 时软删笔记 + 计数回退 + 缓存驱逐 | X-Admin-Key |
+| GET | /api/admin/posts | 笔记管理列表（分页，含作者昵称/互动计数/状态）→ `{list, page, size, total}` | X-Admin-Key |
+| DELETE | /api/admin/posts/{id} | 强制删除笔记（软删 + 计数回退） | X-Admin-Key |
 
 ### 3.9 上传 Upload
 
