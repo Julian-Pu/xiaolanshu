@@ -126,7 +126,7 @@ data class Message(
     val createdAt: String,
 )
 
-data class SearchResult(val posts: List<PostCard>, val users: List<User>)
+data class SearchResult(val posts: List<PostCard>, val users: List<User>, val snippets: List<String?>? = null)
 
 data class HotWord(val word: String, val cnt: Int)
 

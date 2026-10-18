@@ -23,7 +23,7 @@ public class SearchService {
         this.postService = postService;
     }
 
-    public record SearchResult(List<PostCardView> posts, List<UserView> users) {
+    public record SearchResult(List<PostCardView> posts, List<UserView> users, List<String> snippets) {
     }
 
     /** type: post | user | all */
@@ -31,6 +31,7 @@ public class SearchService {
         String like = "%" + q + "%";
         List<PostCardView> posts = new ArrayList<>();
         List<UserView> users = new ArrayList<>();
+        List<String> snippets = new ArrayList<>();
 
         // 记录热搜词（仅非空、长度<=30 的搜索词；user 单查也记，供全站热搜）
         recordHotWord(q);
@@ -40,12 +41,21 @@ public class SearchService {
         PinyinHits hits = pinyinHits(q);
 
         if ("post".equals(type) || "all".equals(type)) {
+            // 相关性排序：标题命中×3 + 正文命中×1 + 话题命中×2 + 热度因子，替代旧的纯热度排序
             List<Map<String, Object>> rows = jdbc.queryForList("""
-                    SELECT * FROM posts
-                    WHERE status = 'published' AND (title LIKE ? OR content LIKE ? OR id IN (%s))
-                    ORDER BY like_count DESC LIMIT ? OFFSET ?
+                    SELECT p.*,
+                        (CASE WHEN p.title LIKE ? THEN 3 ELSE 0 END
+                         + CASE WHEN p.content LIKE ? THEN 1 ELSE 0 END
+                         + CASE WHEN t.name LIKE ? THEN 2 ELSE 0 END
+                         + (p.view_count * 0.1 + p.like_count * 2 + p.collect_count * 1.5 + p.comment_count * 3)) AS score
+                    FROM posts p LEFT JOIN topics t ON t.id = p.topic_id
+                    WHERE p.status = 'published' AND (p.title LIKE ? OR p.content LIKE ? OR t.name LIKE ? OR p.id IN (%s))
+                    ORDER BY score DESC LIMIT ? OFFSET ?
                     """.formatted(placeholders(hits.postIds.size())),
-                    args(like, like, hits.postIds, pp.size(), pp.offset()));
+                    relArgs(like, like, like, hits.postIds, pp.size(), pp.offset()));
+            for (Map<String, Object> row : rows) {
+                snippets.add(snippetOf(row, q));
+            }
             posts = postService.buildCards(rows, viewerId);
         }
         if ("user".equals(type) || "all".equals(type)) {
@@ -67,7 +77,33 @@ public class SearchService {
                         false));
             }
         }
-        return new SearchResult(posts, users);
+        return new SearchResult(posts, users, snippets);
+    }
+
+    /** 高亮片段：正文/标题命中词前后各截取一段（纯文本，不做标签包裹）；拼音命中无片段返回 null */
+    private static String snippetOf(Map<String, Object> row, String q) {
+        String content = (String) row.get("content");
+        String title = (String) row.get("title");
+        String text = (content != null && !content.isBlank()) ? content : (title == null ? "" : title);
+        int idx = text.indexOf(q);
+        if (idx < 0) {
+            idx = text.toLowerCase(java.util.Locale.ROOT).indexOf(q.toLowerCase(java.util.Locale.ROOT));
+        }
+        if (idx < 0) {
+            // 正文未命中时回退标题（标题命中也展示片段）
+            text = title == null ? "" : title;
+            idx = text.indexOf(q);
+            if (idx < 0) {
+                idx = text.toLowerCase(java.util.Locale.ROOT).indexOf(q.toLowerCase(java.util.Locale.ROOT));
+            }
+        }
+        if (idx < 0) {
+            return null;
+        }
+        int start = Math.max(0, idx - 24);
+        int end = Math.min(text.length(), idx + q.length() + 40);
+        String seg = text.substring(start, end).trim();
+        return (start > 0 ? "…" : "") + seg + (end < text.length() ? "…" : "");
     }
 
     /** 热搜词 Top 10（按次数倒序，同次数按最近更新倒序） */
@@ -153,6 +189,21 @@ public class SearchService {
             return "0"; // IN (0) 恒不匹配，避免空占位符
         }
         return String.join(",", java.util.Collections.nCopies(n, "?"));
+    }
+
+    /** 动态拼 SQL 参数：相关性排序（title/content/topic 三个 LIKE + 三个 WHERE LIKE + 拼音 id + 分页） */
+    private static Object[] relArgs(String tLike, String cLike, String topicLike, List<Long> ids, int size, int offset) {
+        List<Object> all = new ArrayList<>();
+        all.add(tLike);
+        all.add(cLike);
+        all.add(topicLike);
+        all.add(tLike);
+        all.add(cLike);
+        all.add(topicLike);
+        all.addAll(ids);
+        all.add(size);
+        all.add(offset);
+        return all.toArray();
     }
 
     /** 动态拼 SQL 参数：LIKE 参数 ×2，拼音 id 列表，分页参数 */

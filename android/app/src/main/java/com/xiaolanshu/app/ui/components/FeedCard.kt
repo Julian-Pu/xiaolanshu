@@ -32,9 +32,9 @@ import coil.compose.AsyncImage
 import com.xiaolanshu.app.data.PostCard
 import com.xiaolanshu.app.util.TimeUtil
 
-/** 双列信息流卡片 */
+/** 双列信息流卡片（snippet 为搜索高亮片段，仅搜索结果显示） */
 @Composable
-fun FeedCard(post: PostCard, onClick: () -> Unit) {
+fun FeedCard(post: PostCard, onClick: () -> Unit, snippet: String? = null) {
     Card(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
@@ -89,6 +89,16 @@ fun FeedCard(post: PostCard, onClick: () -> Unit) {
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (!snippet.isNullOrBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = snippet,
+                        color = LocalAppColors.current.textTertiary,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Avatar(url = post.author.avatar, size = 20.dp)

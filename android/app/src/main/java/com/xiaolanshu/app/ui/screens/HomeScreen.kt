@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -135,9 +136,10 @@ fun HomeScreen(onOpenPost: (Long) -> Unit, onRequireLogin: () -> Unit) {
     }
 }
 
-/** 加载中的骨架屏占位 */
+/** 加载中的骨架屏占位（封面块 + 标题/作者占位条） */
 @Composable
 private fun SkeletonGrid() {
+    val color = LocalAppColors.current.brandBlueLight
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
         contentPadding = PaddingValues(12.dp),
@@ -146,13 +148,30 @@ private fun SkeletonGrid() {
         modifier = Modifier.fillMaxSize(),
     ) {
         items(6) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(3f / 4f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(LocalAppColors.current.brandBlueLight),
-            )
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(3f / 4f)
+                        .background(color),
+                )
+                Box(
+                    Modifier
+                        .padding(start = 10.dp, top = 8.dp, end = 10.dp)
+                        .height(12.dp)
+                        .fillMaxWidth(0.7f)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(color),
+                )
+                Box(
+                    Modifier
+                        .padding(start = 10.dp, top = 6.dp, end = 10.dp, bottom = 8.dp)
+                        .height(10.dp)
+                        .fillMaxWidth(0.45f)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(color),
+                )
+            }
         }
     }
 }

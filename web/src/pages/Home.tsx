@@ -94,7 +94,17 @@ export default function Home() {
       </div>
 
       {initializing ? (
-        <div className="loading">加载中…</div>
+        <div className="feed-masonry" aria-busy="true">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="feed-card" style={{ pointerEvents: 'none' }}>
+              <div className="feed-cover skeleton-block" style={{ aspectRatio: '3 / 4' }} />
+              <div className="feed-body">
+                <div className="skeleton-block" style={{ height: 14, width: '70%', marginBottom: 8, borderRadius: 4 }} />
+                <div className="skeleton-block" style={{ height: 12, width: '40%', borderRadius: 4 }} />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <>
           <Masonry posts={posts} />

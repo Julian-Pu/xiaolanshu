@@ -4,7 +4,7 @@ import { postApi } from '../api'
 import { timeAgo, useAuth } from '../store/auth'
 import type { PostCard } from '../models'
 
-export default function FeedCard({ post }: { post: PostCard }) {
+export default function FeedCard({ post, snippet }: { post: PostCard; snippet?: string | null }) {
   const navigate = useNavigate()
   const token = useAuth((s) => s.token)
   const [liked, setLiked] = useState(post.isLiked)
@@ -63,6 +63,9 @@ export default function FeedCard({ post }: { post: PostCard }) {
           </div>
         )}
         <div className="feed-title">{post.title || '分享生活点滴'}</div>
+        {snippet && (
+          <div className="feed-snippet">{snippet}</div>
+        )}
         <div className="feed-meta">
           <img className="avatar-sm" src={post.author.avatar ?? ''} alt="" />
           <span>{post.author.nickname}</span>

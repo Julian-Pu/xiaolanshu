@@ -101,6 +101,7 @@ export interface Message {
 export interface SearchResult {
   posts: PostCard[]
   users: User[]
+  snippets?: (string | null)[]
 }
 
 export interface HotWord {
@@ -135,6 +136,28 @@ export interface AdminStats {
   postCount: number
   pendingReports: number
   commentCount: number
+}
+
+export interface AnalyticsDaily {
+  d: string
+  cnt: number
+}
+
+export interface AnalyticsHotPost {
+  id: number
+  title: string | null
+  like_count: number
+  collect_count: number
+  comment_count: number
+  view_count: number
+  score: number
+}
+
+export interface AdminAnalytics {
+  dailyPosts: AnalyticsDaily[]
+  dailyUsers: AnalyticsDaily[]
+  hotPosts: AnalyticsHotPost[]
+  hotTopics: { name: string; post_count: number }[]
 }
 
 export interface AdminPost {

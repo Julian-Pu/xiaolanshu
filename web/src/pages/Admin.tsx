@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { adminApi } from '../api'
-import type { AdminPage, AdminPost, AdminStats, ReportItem } from '../models'
+import type { AdminAnalytics, AdminPage, AdminPost, AdminStats, ReportItem } from '../models'
 
-type Tab = 'stats' | 'reports' | 'posts'
+type Tab = 'stats' | 'analytics' | 'reports' | 'posts'
 const REASON_LABEL: Record<string, string> = {
   spam: '垃圾广告/营销',
   porn: '色情低俗',
@@ -75,6 +75,7 @@ export default function Admin() {
         {(
           [
             ['stats', '概览'],
+            ['analytics', '统计报表'],
             ['reports', '举报审核'],
             ['posts', '内容管理'],
           ] as [Tab, string][]
@@ -90,6 +91,7 @@ export default function Admin() {
         ))}
       </div>
       {tab === 'stats' && <StatsPanel ak={key} />}
+      {tab === 'analytics' && <AnalyticsPanel ak={key} />}
       {tab === 'reports' && <ReportsPanel ak={key} />}
       {tab === 'posts' && <PostsPanel ak={key} />}
     </div>
@@ -122,6 +124,102 @@ function StatsPanel({ ak }: { ak: string }) {
           <div className="text-3" style={{ marginTop: 6, fontSize: 13 }}>{label}</div>
         </div>
       ))}
+    </div>
+  )
+}
+
+/** 统计报表：近 7 天内容增长（CSS 条形图）+ 热门笔记/话题排行 */
+function AnalyticsPanel({ ak }: { ak: string }) {
+  const [data, setData] = useState<AdminAnalytics | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    adminApi
+      .analytics(ak)
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+  }, [ak])
+  if (!data) return <div className="text-3">{error || '加载中…'}</div>
+
+  const maxPosts = Math.max(1, ...data.dailyPosts.map((d) => d.cnt))
+  const maxUsers = Math.max(1, ...data.dailyUsers.map((d) => d.cnt))
+
+  const Bar = ({ label, value, max, color }: { label: string; value: number; max: number; color: string }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+      <div style={{ width: 88, fontSize: 12, textAlign: 'right', flexShrink: 0 }}>{label}</div>
+      <div style={{ flex: 1, background: 'rgba(128,128,128,.12)', borderRadius: 4, overflow: 'hidden', height: 18 }}>
+        <div
+          style={{
+            width: `${Math.round((value / max) * 100)}%`,
+            background: color,
+            height: '100%',
+            borderRadius: 4,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            paddingRight: 4,
+            fontSize: 11,
+            color: '#fff',
+            minWidth: 18,
+          }}
+        >
+          {value > 0 ? value : ''}
+        </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="card" style={{ padding: 20 }}>
+        <h4 style={{ margin: '0 0 12px' }}>近 7 天新增笔记 / 新增用户</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
+          <div>
+            <div className="text-3" style={{ marginBottom: 8, fontSize: 13 }}>新增笔记</div>
+            {data.dailyPosts.length === 0 ? <div className="text-3" style={{ fontSize: 13 }}>暂无数据</div> : data.dailyPosts.map((d) => (
+              <Bar key={d.d} label={d.d} value={d.cnt} max={maxPosts} color="var(--primary)" />
+            ))}
+          </div>
+          <div>
+            <div className="text-3" style={{ marginBottom: 8, fontSize: 13 }}>新增用户</div>
+            {data.dailyUsers.length === 0 ? <div className="text-3" style={{ fontSize: 13 }}>暂无数据</div> : data.dailyUsers.map((d) => (
+              <Bar key={d.d} label={d.d} value={d.cnt} max={maxUsers} color="var(--success)" />
+            ))}
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+        <div className="card" style={{ padding: 20 }}>
+          <h4 style={{ margin: '0 0 12px' }}>热门笔记 Top 8（热度 = 赞×3+藏×2+评×5+浏览×0.2）</h4>
+          {data.hotPosts.length === 0 ? (
+            <div className="text-3" style={{ fontSize: 13 }}>暂无数据</div>
+          ) : (
+            <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+              <tbody>
+                {data.hotPosts.map((p) => (
+                  <tr key={p.id} style={{ borderBottom: '1px solid rgba(128,128,128,.15)' }}>
+                    <td style={{ padding: '6px 4px', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {p.title ?? '无标题'}
+                    </td>
+                    <td style={{ padding: '6px 4px', textAlign: 'right', whiteSpace: 'nowrap', color: 'var(--text-3)' }}>
+                      ♥{p.like_count} 💬{p.comment_count} · {Math.round(p.score)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+        <div className="card" style={{ padding: 20 }}>
+          <h4 style={{ margin: '0 0 12px' }}>热门话题 Top 8</h4>
+          {data.hotTopics.length === 0 ? (
+            <div className="text-3" style={{ fontSize: 13 }}>暂无数据</div>
+          ) : (
+            data.hotTopics.map((t, i) => (
+              <Bar key={t.name} label={`#${t.name}`} value={t.post_count} max={Math.max(1, data.hotTopics[0]?.post_count ?? 1)} color="var(--danger)" />
+            ))
+          )}
+        </div>
+      </div>
     </div>
   )
 }

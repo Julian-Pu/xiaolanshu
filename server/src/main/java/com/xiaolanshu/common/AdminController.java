@@ -111,6 +111,39 @@ public class AdminController {
                 "commentCount", nvl(commentCount)));
     }
 
+    /** 统计报表：近 7 天内容增长 + 热门笔记/话题（演示版 SQL 聚合；生产可换 OLAP/ES 物化视图） */
+    @GetMapping("/analytics")
+    public Map<String, Object> analytics(@RequestHeader(value = "X-Admin-Key", required = false) String key) {
+        requireAdminKey(key);
+        String since = java.time.Instant.now().minus(java.time.Duration.ofDays(7))
+                .toString().substring(0, 10);
+        List<Map<String, Object>> dailyPosts = jdbc.queryForList("""
+                SELECT LEFT(created_at, 10) AS d, COUNT(*) AS cnt
+                FROM posts WHERE status = 'published' AND created_at >= ?
+                GROUP BY LEFT(created_at, 10) ORDER BY d
+                """, since);
+        List<Map<String, Object>> dailyUsers = jdbc.queryForList("""
+                SELECT LEFT(created_at, 10) AS d, COUNT(*) AS cnt
+                FROM users WHERE created_at >= ?
+                GROUP BY LEFT(created_at, 10) ORDER BY d
+                """, since);
+        List<Map<String, Object>> hotPosts = jdbc.queryForList("""
+                SELECT id, title, like_count, collect_count, comment_count, view_count,
+                       (like_count * 3 + collect_count * 2 + comment_count * 5 + view_count * 0.2) AS score
+                FROM posts WHERE status = 'published'
+                ORDER BY score DESC LIMIT 8
+                """);
+        List<Map<String, Object>> hotTopics = jdbc.queryForList("""
+                SELECT name, post_count FROM topics
+                ORDER BY post_count DESC LIMIT 8
+                """);
+        return Map.of("code", 0, "message", "ok", "data", Map.of(
+                "dailyPosts", dailyPosts,
+                "dailyUsers", dailyUsers,
+                "hotPosts", hotPosts,
+                "hotTopics", hotTopics));
+    }
+
     /** 举报列表：?status=PENDING|APPROVED|IGNORED（缺省全部），分页 ?page&size */
     @GetMapping("/reports")
     public Map<String, Object> reports(@RequestHeader(value = "X-Admin-Key", required = false) String key,

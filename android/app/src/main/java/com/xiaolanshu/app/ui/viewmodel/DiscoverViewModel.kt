@@ -19,6 +19,7 @@ data class DiscoverUiState(
     val hotWords: List<HotWord> = emptyList(),
     val history: List<String> = emptyList(),
     val posts: List<PostCard> = emptyList(),
+    val snippets: List<String?> = emptyList(),
     val users: List<User> = emptyList(),
     val searched: Boolean = false,
     val loading: Boolean = true,
@@ -60,6 +61,7 @@ class DiscoverViewModel : ViewModel() {
                     if (resp.code == 0 && resp.data != null) {
                         _ui.value = _ui.value.copy(
                             posts = resp.data.posts,
+                            snippets = resp.data.snippets ?: emptyList(),
                             users = resp.data.users,
                             searched = true,
                         )

@@ -90,7 +90,7 @@
 
 | 方法 | 路径 | 说明 | 鉴权 |
 |---|---|---|---|
-| GET | /api/search | `q=&type=post\|user\|all&page&size`；标题/正文/昵称 LIKE + **拼音纠错**（全拼与首字母命中） | - |
+| GET | /api/search | `q=&type=post\|user\|all&page&size`；**相关性排序**（标题×3/正文×1/话题×2 + 热度因子）+ 拼音纠错（全拼与首字母命中）+ `snippets[]` 高亮片段（与 posts 平行） | - |
 | GET | /api/search/hot | 热搜词 Top 10（搜索时自动计数） | - |
 
 ### 3.7 通知 Notification
@@ -128,6 +128,7 @@
 | POST | /api/admin/warm-hot-feed | 手动预热推荐热点榜（全局热度 TopN → Redis ZSET）→ `{warmed}` | X-Admin-Key |
 | GET | /api/admin/audit/logs | 内容安全审核日志（最近 50 条，含命中词/用户/片段，供人工复核） | X-Admin-Key |
 | GET | /api/admin/stats | 管理概览统计 → `{userCount, postCount, pendingReports, commentCount}` | X-Admin-Key |
+| GET | /api/admin/analytics | 统计报表 → 近 7 天新增笔记/用户 + 热门笔记 Top8（热度=赞×3+藏×2+评×5+浏览×0.2）+ 热门话题 Top8 | X-Admin-Key |
 | GET | /api/admin/reports | 举报列表（`?status=PENDING/APPROVED/IGNORED`，缺省全部，分页）→ `{list, page, size, total}`，含笔记标题/举报人昵称 | X-Admin-Key |
 | POST | /api/admin/reports/{id}/review | 举报审核 `{action: APPROVE\|IGNORE}`；APPROVE 时软删笔记 + 计数回退 + 缓存驱逐 | X-Admin-Key |
 | GET | /api/admin/posts | 笔记管理列表（分页，含作者昵称/互动计数/状态）→ `{list, page, size, total}` | X-Admin-Key |

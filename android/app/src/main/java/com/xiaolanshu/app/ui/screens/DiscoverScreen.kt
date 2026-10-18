@@ -178,8 +178,8 @@ fun DiscoverScreen(onOpenPost: (Long) -> Unit, onOpenUser: (Long) -> Unit) {
                 if (ui.posts.isEmpty() && ui.users.isEmpty()) {
                     item { EmptyView("没有找到相关内容") }
                 }
-                items(ui.posts, key = { it.id }) { post ->
-                    FeedCard(post = post, onClick = { onOpenPost(post.id) })
+                items(ui.posts.size, key = { ui.posts[it].id }) { i ->
+                    FeedCard(post = ui.posts[i], onClick = { onOpenPost(ui.posts[i].id) }, snippet = ui.snippets.getOrNull(i))
                     Spacer(Modifier.height(10.dp))
                 }
             }

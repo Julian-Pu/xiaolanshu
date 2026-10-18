@@ -27,7 +27,7 @@ public class SearchController {
             @RequestParam(required = false) Integer size,
             HttpServletRequest request) {
         if (q.isBlank()) {
-            return ApiResponse.ok(new SearchService.SearchResult(java.util.List.of(), java.util.List.of()));
+            return ApiResponse.ok(new SearchService.SearchResult(java.util.List.of(), java.util.List.of(), java.util.List.of()));
         }
         return ApiResponse.ok(searchService.search(q.trim(), type, PageParams.of(page, size), CurrentUser.optional(request)));
     }

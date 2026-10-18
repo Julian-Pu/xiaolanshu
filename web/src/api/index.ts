@@ -1,6 +1,7 @@
 import { del, get, post, put } from './http'
 import axios from 'axios'
 import type {
+  AdminAnalytics,
   AdminPage,
   AdminPost,
   AdminStats,
@@ -169,6 +170,7 @@ async function adminReq<T>(
 
 export const adminApi = {
   stats: (key: string) => adminReq<AdminStats>('get', '/admin/stats', key),
+  analytics: (key: string) => adminReq<AdminAnalytics>('get', '/admin/analytics', key),
   reports: (key: string, status = '', page = 1, size = 20) =>
     adminReq<AdminPage<ReportItem>>('get', '/admin/reports', key, undefined, { status, page, size }),
   review: (key: string, id: number, action: 'APPROVE' | 'IGNORE') =>

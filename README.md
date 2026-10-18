@@ -122,6 +122,9 @@ npm run dev     # http://localhost:5173
 - [x] 举报入口：笔记详情页举报（垃圾广告/色情低俗/违法违规/其他 + 补充说明），Android + Web，同一用户同一笔记去重
 - [x] 管理后台 Web 页（/admin，X-Admin-Key 登录）：概览统计 + 举报审核（成立删笔记/忽略）+ 内容管理（笔记列表/强制删除）
 - [x] 忘记密码：登录页入口 + 短信验证码重置密码（POST /api/auth/reset-password），Android + Web
+- [x] 搜索升级：相关性排序（标题×3/正文×1/话题×2 + 热度因子）+ 正文高亮片段（Android + Web 展示）+ 拼音纠错保留
+- [x] 统计报表：管理后台新增 Tab——近 7 天新增笔记/用户（条形图）+ 热门笔记 Top8（热度分）+ 热门话题 Top8（GET /api/admin/analytics）
+- [x] 骨架屏懒加载：Web 首页加载骨架卡 + 图片 loading=lazy；Android Feed 骨架卡（封面+标题占位）
 
 ## 五、文档索引
 

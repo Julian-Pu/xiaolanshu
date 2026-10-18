@@ -309,6 +309,28 @@ img {
   overflow: hidden;
 }
 
+/* ---- 骨架屏 ---- */
+.skeleton-block {
+  background: linear-gradient(90deg, rgba(128, 128, 128, 0.12) 25%, rgba(128, 128, 128, 0.22) 37%, rgba(128, 128, 128, 0.12) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+  }
+}
+
 .feed-meta {
   display: flex;
   align-items: center;

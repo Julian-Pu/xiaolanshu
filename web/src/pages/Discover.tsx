@@ -12,6 +12,7 @@ export default function Discover() {
   const [topics, setTopics] = useState<Topic[]>([])
   const [hotWords, setHotWords] = useState<HotWord[]>([])
   const [posts, setPosts] = useState<PostCard[]>([])
+  const [snippets, setSnippets] = useState<(string | null)[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [searched, setSearched] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -33,6 +34,7 @@ export default function Discover() {
     try {
       const r = await searchApi.search(keyword)
       setPosts(r.posts)
+      setSnippets(r.snippets ?? [])
       setUsers(r.users)
       setSearched(true)
     } finally {
@@ -140,7 +142,7 @@ export default function Discover() {
             </>
           )}
           <h3 className="side-title">笔记</h3>
-          <Masonry posts={posts} />
+          <Masonry posts={posts} snippets={snippets} />
         </>
       )}
     </div>
