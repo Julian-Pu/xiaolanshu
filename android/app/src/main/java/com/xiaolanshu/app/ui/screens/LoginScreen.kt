@@ -137,6 +137,12 @@ fun LoginScreen(onSuccess: () -> Unit) {
                     fontSize = 11.sp,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 )
+                Text(
+                    "登录/注册即代表同意《用户协议》与《隐私政策》",
+                    color = LocalAppColors.current.textTertiary,
+                    fontSize = 10.sp,
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp),
+                )
             }
         }
     }

@@ -337,6 +337,27 @@ img {
   background: linear-gradient(160deg, #eaf1ff 0%, #f6f7f9 60%);
 }
 
+/* 隐私政策 / 用户协议 */
+.legal-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: linear-gradient(160deg, #eaf1ff 0%, #f6f7f9 60%);
+  padding: 48px 16px;
+}
+
+.legal-card {
+  width: 720px;
+  max-width: 100%;
+  line-height: 1.8;
+}
+
+.legal-card h4 {
+  margin: 18px 0 6px;
+  color: var(--text-1);
+}
+
 .login-card {
   width: 380px;
   background: var(--card);

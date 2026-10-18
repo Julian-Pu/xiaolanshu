@@ -11,6 +11,7 @@ android/.idea/
 # ---- Web ----
 web/node_modules/
 web/dist/
+web/tsconfig.tsbuildinfo
 
 # ---- Server (Spring Boot) ----
 server/target/

@@ -122,8 +122,9 @@
 
 | 方法 | 路径 | 说明 | 鉴权 |
 |---|---|---|---|
-| POST | /api/admin/reconcile-counts | 手动触发计数对账（重算 like/collect/comment 计数与话题笔记数）→ `{changedRows}` | 无 |
+| POST | /api/admin/reconcile-counts | 手动触发计数对账（重算 like/collect/comment 计数与话题笔记数）→ `{changedRows, evictedCount}`（对账后驱逐变更笔记热点缓存） | 无 |
 | POST | /api/admin/rebuild-material | 手动重建推荐离线物料池（每用户 TopN 候选）→ `{users, candidates}` | 无 |
+| POST | /api/admin/warm-hot-feed | 手动预热推荐热点榜（全局热度 TopN → Redis ZSET）→ `{warmed}` | 无 |
 | GET | /api/admin/audit/logs | 内容安全审核日志（最近 50 条，含命中词/用户/片段，供人工复核） | 无 |
 
 ### 3.9 上传 Upload

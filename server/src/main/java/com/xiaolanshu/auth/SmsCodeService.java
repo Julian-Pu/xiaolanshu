@@ -28,6 +28,8 @@ public class SmsCodeService {
     private static final Logger log = LoggerFactory.getLogger(SmsCodeService.class);
     private static final String KEY_PREFIX = "sms:code:";
     private static final long RESEND_INTERVAL_MS = 60_000; // 同一手机号 60 秒内不可重复发送
+    private static final int MAX_FAIL_ATTEMPTS = 5;         // 连续验证失败上限（防爆破）
+    private static final long FAIL_LOCK_MS = 5 * 60_000L;   // 超过上限锁定 5 分钟
 
     private final StringRedisTemplate redis;
     private final boolean redisEnabled;
@@ -38,6 +40,9 @@ public class SmsCodeService {
     /** Redis 不可用时的内存兜底：phoneKey -> (验证码, 过期时间戳) */
     private final ConcurrentHashMap<String, Entry> memory = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> lastSentAt = new ConcurrentHashMap<>();
+    /** 防爆破：phone -> 连续失败次数；锁定：phone -> 锁定期限时间戳 */
+    private final ConcurrentHashMap<String, Integer> failCount = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> lockUntil = new ConcurrentHashMap<>();
     private volatile boolean warnedRedis = false;
 
     private record Entry(String code, long expireAt) {
@@ -56,11 +61,17 @@ public class SmsCodeService {
 
     /**
      * 发送验证码：生成 6 位随机码 → 存储 → 打印控制台日志 → 返回。
+     * 防爆破：手机号被锁定（连续失败超限）期间拒绝发送。
      *
      * @return debug 模式返回明文验证码（便于联调），生产模式返回 null
      */
     public String send(String phone) {
         long now = System.currentTimeMillis();
+        Long lock = lockUntil.get(phone);
+        if (lock != null && now < lock) {
+            long left = (lock - now) / 1000;
+            throw ApiException.tooManyRequests("验证尝试失败过多，请 " + (left / 60 + 1) + " 分钟后再试");
+        }
         Long last = lastSentAt.get(phone);
         if (last != null && now - last < RESEND_INTERVAL_MS) {
             throw ApiException.tooManyRequests("发送过于频繁，请 60 秒后再试");
@@ -77,16 +88,30 @@ public class SmsCodeService {
         return debug ? code : null;
     }
 
-    /** 校验验证码：匹配则立即作废（一次性），返回是否通过 */
+    /** 校验验证码：匹配则立即作废（一次性）；失败累计，连续 MAX_FAIL_ATTEMPTS 次后锁定 5 分钟（防爆破） */
     public boolean verify(String phone, String code) {
         if (phone == null || code == null) {
             return false;
+        }
+        long now = System.currentTimeMillis();
+        Long lock = lockUntil.get(phone);
+        if (lock != null && now < lock) {
+            return false; // 锁定中直接拒绝
         }
         String key = KEY_PREFIX + phone;
         String stored = read(key);
         if (stored != null && stored.equals(code)) {
             remove(key);
+            failCount.remove(phone);
+            lockUntil.remove(phone);
             return true;
+        }
+        // 失败计数 + 锁定
+        int fails = failCount.merge(phone, 1, Integer::sum);
+        if (fails >= MAX_FAIL_ATTEMPTS) {
+            lockUntil.put(phone, now + FAIL_LOCK_MS);
+            failCount.remove(phone);
+            log.warn("[security] 手机号 {} 验证码连续失败 {} 次，已锁定 5 分钟（防爆破）", phone, MAX_FAIL_ATTEMPTS);
         }
         return false;
     }

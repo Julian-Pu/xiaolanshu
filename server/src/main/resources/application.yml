@@ -35,9 +35,11 @@ spring:
 # 业务配置
 xiaolanshu:
   jwt:
-    # 生产必须替换为 >= 32 字节的高熵随机串
-    secret: change-me-to-a-long-random-secret-key-at-least-32-bytes
+    # 生产必须通过环境变量 XIAOLANSHU_JWT_SECRET 替换为 >= 32 字节的高熵随机串（启动会校验并告警）
+    secret: ${XIAOLANSHU_JWT_SECRET:change-me-to-a-long-random-secret-key-at-least-32-bytes}
     expires-days: 7
+  # 管理接口密钥（请求头 X-Admin-Key），生产通过 XIAOLANSHU_ADMIN_KEY 注入
+  admin-key: ${XIAOLANSHU_ADMIN_KEY:dev-admin-key}
   upload-dir: ./uploads
   web-dist: ../web/dist          # 网页端构建产物（存在时后端自动托管）
   image:
@@ -47,8 +49,12 @@ xiaolanshu:
     enabled: true                # 文本机审开关（命中敏感词拦截发布/编辑/评论）
   recommend:
     pool-size: 50                # 推荐离线物料池每用户候选数（每小时定时重建）
+  feed:
+    hot-top-n: 200               # 热点榜预热条数（Redis ZSET）
+    hot-ttl-seconds: 21600       # 热点榜 TTL（6 小时，与物料池新鲜度一致）
+    hot-cron: 0 20 * * * *       # 热点榜预热（每小时 20 分，与物料池整点错开）
   rate-limit:
-    max-per-minute: 300
+    max-per-minute: ${XIAOLANSHU_RATE_LIMIT_MAX_PER_MINUTE:300}   # 每 IP 每分钟请求上限（被刷可调低）
   sms:
     # 短信验证码（开发模式，未接运营商短信通道）
     enabled: true              # 注册是否强制校验短信验证码；false 恢复纯密码注册

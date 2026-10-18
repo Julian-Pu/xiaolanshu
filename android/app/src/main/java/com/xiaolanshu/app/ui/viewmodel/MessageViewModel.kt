@@ -9,6 +9,7 @@ import com.xiaolanshu.app.data.Message
 import com.xiaolanshu.app.data.NotificationItem
 import com.xiaolanshu.app.data.repository.ConversationRepository
 import com.xiaolanshu.app.data.repository.NotificationRepository
+import com.xiaolanshu.app.ui.state.AppState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -33,14 +34,28 @@ class MessageViewModel : ViewModel() {
             runCatching { NotificationRepository.list(type, 1, 50) }
                 .onSuccess { if (it.code == 0) _ui.value = _ui.value.copy(notifications = it.data?.list ?: emptyList()) }
             runCatching { NotificationRepository.unreadCount() }
-                .onSuccess { if (it.code == 0) onUnreadChange(it.data ?: 0) }
+                .onSuccess {
+                    if (it.code == 0) {
+                        val unread = it.data ?: 0
+                        // 跨页共享：写全局状态（底部角标任意页面即时可见）
+                        AppState.notifUnread.value = unread
+                        onUnreadChange(unread)
+                    }
+                }
         }
     }
 
     fun loadConversations() {
         viewModelScope.launch {
             runCatching { ConversationRepository.conversations() }
-                .onSuccess { if (it.code == 0) _ui.value = _ui.value.copy(conversations = it.data ?: emptyList()) }
+                .onSuccess {
+                    if (it.code == 0) {
+                        val convs = it.data ?: emptyList()
+                        _ui.value = _ui.value.copy(conversations = convs)
+                        // 跨页共享：私信未读总数
+                        AppState.msgUnread.value = convs.sumOf { c -> c.unreadCount.toInt() }
+                    }
+                }
         }
     }
 
@@ -80,7 +95,7 @@ class MessageViewModel : ViewModel() {
                     }
                 },
                 onNotify = { notif ->
-                    // 多端实时通知：刷新列表 + 未读数，并上抛（UI 层弹通知栏）
+                    // 多端实时通知：刷新列表 + 未读数（写全局状态，跨页角标即时更新），并上抛（UI 层弹通知栏）
                     loadNotifications(null, onUnreadChange)
                     onNotify(NotificationItem(
                         id = notif.get("id")?.asLong ?: 0,
@@ -105,6 +120,7 @@ class MessageViewModel : ViewModel() {
         viewModelScope.launch {
             runCatching { NotificationRepository.readAll() }
                 .onSuccess {
+                    AppState.notifUnread.value = 0
                     onUnreadChange(0)
                     loadNotifications(null)
                 }

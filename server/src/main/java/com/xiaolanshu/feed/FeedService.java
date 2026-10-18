@@ -22,11 +22,14 @@ public class FeedService {
     private final JdbcTemplate jdbc;
     private final PostService postService;
     private final InterestService interestService;
+    private final FeedHotCacheService feedHotCache;
 
-    public FeedService(JdbcTemplate jdbc, PostService postService, InterestService interestService) {
+    public FeedService(JdbcTemplate jdbc, PostService postService, InterestService interestService,
+                       FeedHotCacheService feedHotCache) {
         this.jdbc = jdbc;
         this.postService = postService;
         this.interestService = interestService;
+        this.feedHotCache = feedHotCache;
     }
 
     /**
@@ -79,7 +82,13 @@ public class FeedService {
                     "SELECT COUNT(*) FROM recommend_candidates WHERE user_id = ?", Long.class, viewerId == null ? 0 : viewerId);
             return PageResult.of(postService.buildCards(pool, viewerId), total == null ? 0 : total, pp.page(), pp.size());
         }
-        // 兜底：实时召回 + 排序（与物料池生成逻辑一致，见 rankedRows）
+        // 兜底1：Redis 热点榜（全局热度 TopN 预热，ZREVRANGE 分页 + SQL 取行，无全量排序）
+        List<Map<String, Object>> hot = hotRows(viewerId, pp);
+        if (hot != null) {
+            long total = feedHotCache.hotCount();
+            return PageResult.of(postService.buildCards(hot, viewerId), total, pp.page(), pp.size());
+        }
+        // 兜底2（最后防线：仅本地无 Redis 且物料池过期时触发）：实时全量排序
         List<Map<String, Object>> ranked = rankedRows(viewerId);
         Long total = jdbc.queryForObject("SELECT COUNT(*) FROM posts WHERE status = 'published'", Long.class);
         int from = Math.min(pp.offset(), ranked.size());
@@ -87,9 +96,36 @@ public class FeedService {
         return PageResult.of(postService.buildCards(ranked.subList(from, to), viewerId), total, pp.page(), pp.size());
     }
 
+    /**
+     * Redis 热点榜取行：热度 id 列表（ZREVRANGE 分页）→ SQL 取卡片行 → 按榜序重排。
+     * 返回 null 表示热点榜不可用/未预热（调用方回落到全量排序最后防线）。
+     */
+    public List<Map<String, Object>> hotRows(Long viewerId, PageParams pp) {
+        List<Long> ids = feedHotCache.hotIds(pp);
+        if (ids.isEmpty()) {
+            return null;
+        }
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                SELECT p.*, t.name AS topic_name FROM posts p
+                LEFT JOIN topics t ON t.id = p.topic_id
+                WHERE p.id IN (%s) AND p.status = 'published'
+                """.formatted(placeholders(ids.size())), ids.toArray());
+        Map<Long, Map<String, Object>> byId = new HashMap<>();
+        for (Map<String, Object> r : rows) {
+            byId.put(((Number) r.get("id")).longValue(), r);
+        }
+        List<Map<String, Object>> ordered = new ArrayList<>();
+        for (Long id : ids) {
+            Map<String, Object> r = byId.get(id);
+            if (r != null) {
+                ordered.add(r);
+            }
+        }
+        return ordered;
+    }
+
     /** 从离线物料池取当前用户的候选（JOIN posts 保留卡片所需字段） */
-    public List<Map<String, Object>> poolRows(Long viewerId, PageParams pp) {
-        if (viewerId == null) {
+    public List<Map<String, Object>> poolRows(Long viewerId, PageParams pp) {        if (viewerId == null) {
             return List.of();
         }
         return jdbc.queryForList("""

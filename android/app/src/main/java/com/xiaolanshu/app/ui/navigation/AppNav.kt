@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +39,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.xiaolanshu.app.data.repository.NotificationRepository
 import com.xiaolanshu.app.data.AuthStore
+import com.xiaolanshu.app.ui.state.AppState
 import com.xiaolanshu.app.ui.screens.DiscoverScreen
 import com.xiaolanshu.app.ui.screens.EditPostScreen
 import com.xiaolanshu.app.ui.screens.HistoryScreen
@@ -60,6 +62,7 @@ fun AppNav() {
     NavHost(navController = nav, startDestination = start) {
         composable("login") {
             LoginScreen(onSuccess = {
+                AppState.reset() // 切换账号清空跨页角标
                 nav.navigate("main") {
                     popUpTo("login") { inclusive = true }
                 }
@@ -168,14 +171,15 @@ private fun MainScreen(
     onRequireLogin: () -> Unit,
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    var unread by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
+    // 跨页状态：底部角标直接收集全局通知未读数（消息页收到 notify 帧/已读操作即时反映）
+    val notifUnread by AppState.notifUnread.collectAsState()
 
-    // 登录后加载消息未读数（底部 tab 角标）
+    // 登录后加载消息未读数（写全局状态，供底部 tab 角标）
     LaunchedEffect(AuthStore.get().token) {
         if (AuthStore.get().token != null) {
             runCatching { NotificationRepository.unreadCount() }
-                .onSuccess { if (it.code == 0) unread = it.data ?: 0 }
+                .onSuccess { if (it.code == 0) AppState.notifUnread.value = it.data ?: 0 }
         }
     }
 
@@ -196,14 +200,14 @@ private fun MainScreen(
                         icon = {
                             Box {
                                 Icon(icon, contentDescription = label)
-                                if (index == 3 && unread > 0) {
+                                if (index == 3 && notifUnread > 0) {
                                     Badge(
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
                                             .offset(x = 6.dp, y = (-2).dp)
                                             .background(LocalAppColors.current.brandBlue, RoundedCornerShape(10.dp)),
                                     ) {
-                                        Text(if (unread > 99) "99+" else "$unread", style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
+                                        Text(if (notifUnread > 99) "99+" else "$notifUnread", style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
                                     }
                                 }
                             }
@@ -221,7 +225,7 @@ private fun MainScreen(
                 2 -> PublishScreen(onPublished = onOpenPost, onRequireLogin = onRequireLogin)
                 3 -> MessageScreen(
                     onOpenUser = onOpenUser,
-                    onUnreadChange = { unread = it },
+                    // 未读数已由 ViewModel 写全局 AppState（跨页角标自动更新），无需回调传参
                 )
                 else -> ProfileScreen(
                     userId = null,

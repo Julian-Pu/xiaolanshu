@@ -134,6 +134,12 @@ export default function Login() {
         <div className="text-3" style={{ marginTop: 12, fontSize: 12, textAlign: 'center' }}>
           演示账号：13800000001~5 / 123456
         </div>
+        <div className="text-3" style={{ marginTop: 12, fontSize: 12, textAlign: 'center' }}>
+          登录/注册即代表同意{' '}
+          <a href="#/terms" style={{ color: 'var(--primary)' }}>《用户协议》</a>
+          {' '}与{' '}
+          <a href="#/terms" style={{ color: 'var(--primary)' }}>《隐私政策》</a>
+        </div>
       </div>
     </div>
   )
